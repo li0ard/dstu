@@ -1,0 +1,50 @@
+{
+  "name": "@li0ard/dstu",
+  "version": "0.1.0",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./dstu4145.js": "./dstu4145/index.js",
+    "./kalyna.js": "./kalyna/index.js",
+    "./kupyna.js": "./kupyna/index.js",
+    "./modes.js": "./modes/index.js",
+    "./strumok.js": "./strumok/index.js",
+    "./types.js": "./types.js"
+  },
+  "author": "li0ard",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/li0ard/dstu.git"
+  },
+  "bugs": {
+    "url": "https://github.com/li0ard/dstu/issues"
+  },
+  "homepage": "https://github.com/li0ard/dstu#readme",
+  "funding": "https://li0ard.rest/donate",
+  "description": "DSTU cryptography algorithms in pure TypeScript",
+  "license": "MIT",
+  "scripts": {
+    "build": "rm -rf dist/ && tsc --project tsconfig.build.json",
+    "docs": "typedoc --options .config/typedoc/config.cjs"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.2.0",
+    "@types/bun": "latest",
+    "typedoc": "^0.28.19"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@li0ard/sp80038": "^0.1.2",
+    "@noble/hashes": "^2.2.0",
+    "bn.js": "^5.2.3"
+  },
+  "files": ["**/*.js", "**/*.d.ts"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": ["dstu", "crypto", "kalyna", "kupyna", "strumok"]
+}
