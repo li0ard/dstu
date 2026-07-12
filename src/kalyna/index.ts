@@ -10,6 +10,21 @@ const swap_block = (k: TArg<BigUint64Array>, N: number) => {
     k[N - 1] = t;
 }
 
+export const column = (
+    x: TArg<BigUint64Array>, i: number, N: number,
+    c1: number, c2: number, c3: number,
+    c4: number, c5: number, c6: number, c7: number
+): bigint => (
+    T[0][byte(x[(i + N) % N])] ^ // c0 - always 0 for both Kalyna and Kupyna
+    T[1][byte(x[(i - c1 + N) % N] >> 8n)] ^
+    T[2][byte(x[(i - c2 + N) % N] >> 16n)] ^
+    T[3][byte(x[(i - c3 + N) % N] >> 24n)] ^
+    T[4][byte(x[(i - c4 + N) % N] >> 32n)] ^
+    T[5][byte(x[(i - c5 + N) % N] >> 40n)] ^
+    T[6][byte(x[(i - c6 + N) % N] >> 48n)] ^
+    T[7][byte(x[(i - c7 + N) % N] >> 56n)]
+)
+
 export abstract class Kalyna implements Cipher {
     /** Block size */
     public readonly blockSize: number;
@@ -113,15 +128,12 @@ export abstract class Kalyna implements Cipher {
         for (let i = 0; i < this.N; i++) y[i] = x[i] - k[i];
     }
 
-    private column(x: TArg<BigUint64Array>, i: number) {
-        return T[0][byte(x[(i - this.wordOffsets[0] + this.N) % this.N])] ^
-            T[1][byte(x[(i - this.wordOffsets[1] + this.N) % this.N] >> 8n)] ^
-            T[2][byte(x[(i - this.wordOffsets[2] + this.N) % this.N] >> 16n)] ^
-            T[3][byte(x[(i - this.wordOffsets[3] + this.N) % this.N] >> 24n)] ^
-            T[4][byte(x[(i - this.wordOffsets[4] + this.N) % this.N] >> 32n)] ^
-            T[5][byte(x[(i - this.wordOffsets[5] + this.N) % this.N] >> 40n)] ^
-            T[6][byte(x[(i - this.wordOffsets[6] + this.N) % this.N] >> 48n)] ^
-            T[7][byte(x[(i - this.wordOffsets[7] + this.N) % this.N] >> 56n)];
+    private column(x: TArg<BigUint64Array>, i: number): bigint {
+        return column(
+            x, i, this.N,
+            this.wordOffsets[1], this.wordOffsets[2], this.wordOffsets[3],
+            this.wordOffsets[4], this.wordOffsets[5], this.wordOffsets[6], this.wordOffsets[7]
+        );
     }
 
     private G(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, k: TArg<BigUint64Array>) {

@@ -1,6 +1,6 @@
 import { concatBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { bytesToUint64sLE, numberToBytesLE, uint64sToBytesLE, byte } from "../utils.js";
-import { T } from "../const.js";
+import { bytesToUint64sLE, numberToBytesLE, uint64sToBytesLE } from "../utils.js";
+import { column } from "../kalyna/index.js";
 
 const r = 0x00F0F0F0F0F0F0F3n;
 
@@ -42,7 +42,7 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
             this.nx += n;
         
             if (this.nx === this.blockLen) {
-                this.transform(bytesToUint64sLE(this.x));
+                this.F(bytesToUint64sLE(this.x));
                 this.nx = 0;
             }
         
@@ -50,7 +50,7 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
         }
     
         while (data.length >= this.blockLen) {
-            this.transform(bytesToUint64sLE(data.subarray(0, this.blockLen)));
+            this.F(bytesToUint64sLE(data.subarray(0, this.blockLen)));
             this.nx = 0;
             data = data.slice(this.blockLen);
         }
@@ -80,29 +80,21 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
 
         if (this.nx > this.threshold) {
             fillBytes(this.nx);
-            this.transform(bytesToUint64sLE(this.x));
+            this.F(bytesToUint64sLE(this.x));
             this.nx = 0;
         }
 
         fillBytes(this.nx);
         this.x.set(numberToBytesLE(this.len * 8n, 12), this.threshold);
-        this.transform(bytesToUint64sLE(this.x));
+        this.F(bytesToUint64sLE(this.x));
         this.outputTransform();
 
         buffer.set(uint64sToBytesLE(this.s).subarray(this.outputLen));
         this.destroy();
     }
 
-    private column(x: TArg<BigUint64Array>, i: number) {
-        const lastOffset = this.blockLen == 64 ? 7 : 11;
-        return T[0][byte(x[(i + this.stSize) % this.stSize])] ^
-                T[1][byte(x[(i - 1 + this.stSize) % this.stSize] >> 8n)] ^
-                T[2][byte(x[(i - 2 + this.stSize) % this.stSize] >> 16n)] ^
-                T[3][byte(x[(i - 3 + this.stSize) % this.stSize] >> 24n)] ^
-                T[4][byte(x[(i - 4 + this.stSize) % this.stSize] >> 32n)] ^
-                T[5][byte(x[(i - 5 + this.stSize) % this.stSize] >> 40n)] ^
-                T[6][byte(x[(i - 6 + this.stSize) % this.stSize] >> 48n)] ^
-                T[7][byte(x[(i - lastOffset + this.stSize) % this.stSize] >> 56n)]
+    private column(x: TArg<BigUint64Array>, i: number): bigint {
+        return column(x, i, this.stSize, 1, 2, 3, 4, 5, 6, this.blockLen == 64 ? 7 : 11);
     }
 
     private G(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>) {
@@ -110,8 +102,8 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
     }
 
     private P(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, round: bigint) {
-        for(let idx = 0n; idx < BigInt(this.stSize); idx++)
-            x[Number(idx)] ^= (idx << 4n) ^ round;
+        for(let i = 0n; i < BigInt(this.stSize); i++)
+            x[Number(i)] ^= (i << 4n) ^ round;
 
         const r1 = round + 1n;
         for (let i = 0; i < this.stSize; i++)
@@ -136,7 +128,7 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
         for(let column = 0; column < this.stSize; column++) this.s[column] ^= t1[column];
     }
 
-    private transform(b: TArg<BigUint64Array>) {
+    private F(b: TArg<BigUint64Array>) {
         const AQ1 = new BigUint64Array(this.stSize);
         const AP1 = new BigUint64Array(this.stSize);
         const tmp = new BigUint64Array(this.stSize);
