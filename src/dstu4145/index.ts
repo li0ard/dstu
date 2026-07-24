@@ -1,93 +1,70 @@
-import { randomBytes, type TArg } from "@noble/hashes/utils.js";
-import type { DSTUParameters, PublicKey, Signature } from "./const.js";
-import { Curve, Field, Point } from "./ec/index.js";
+import { concatBytes, hexToBytes, randomBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { DSTU_163_TEST, type DSTUParameters } from "./const.js";
+import { binaryWeierstrass } from "./ec/index.js";
 import { BN } from "bn.js";
 
-/**
- * Generate public key from private
- * @param parameters Curve parameters
- * @param privateKey Private key
- */
-export const getPublicKey = (
-    parameters: DSTUParameters,
-    privateKey: TArg<Uint8Array>
-): PublicKey => {
-    const curve = new Curve(parameters);
-    const Q = curve.base.mul(Field.fromU8(privateKey, curve)).negate();
+export const dstu4145 = (parameters: DSTUParameters) => {
+    const curve = binaryWeierstrass(parameters);
+    const n = new BN(curve.ORDER.value);
 
-    return { x: Q.x.buf8(), y: Q.y.buf8() }
-}
+    const getPublicKey = (secretKey: TArg<Uint8Array>): TRet<Uint8Array> =>
+        curve.Point.BASE.mul(curve.Field.fromBytes(secretKey)).negate().toBytes();
 
-/**
- * Generate signature of provided digest
- * @param parameters Curve parameters
- * @param privateKey Private key
- * @param digest Digest to sign
- * @param rand Optional. Predefined random data
- */
-export const sign = (
-    parameters: DSTUParameters,
-    privateKey: TArg<Uint8Array>,
-    digest: TArg<Uint8Array>,
-    rand?: TArg<Uint8Array>
-): Signature => {
-    const curve = new Curve(parameters);
-    const n = new BN(curve.order.value);
-    let e = rand ? new BN(rand).mod(n) : new BN(randomBytes(Math.ceil(curve.m / 8))).mod(n);
-    if (e.isZero()) e = new BN(1);
+    const sign = (
+        secretKey: TArg<Uint8Array>,
+        digest: TArg<Uint8Array>,
+        rand?: TArg<Uint8Array>
+    ): TRet<Uint8Array> => {
+        let e = rand ? new BN(rand).mod(n) : new BN(randomBytes(Math.ceil(curve.parameters.m / 8))).mod(n);
+        if (e.isZero()) e = new BN(1);
 
-    const d = new BN(privateKey).mod(n);
-    if(d.lten(0) || d.gte(curve.order.value)) throw new Error("Invalid private key");
-    // h = hash_to_field(H(T))
-    let h = Field.hashToField(curve, digest);
-    if(h.is0()) h = Field.get1();
-    // Fe = eP.x
-    const Fe = curve.base.mul(new Field(e)).x;
-    // r = h * Fe
-    const r = h.mulmod(Fe).value;
-    if (r.isZero()) return sign(parameters, privateKey, digest, rand);
-    // s = e + dr (mod n)
-    const s = e.add(d.mul(r)).mod(n);
-    if (s.isZero()) return sign(parameters, privateKey, digest, rand);
-        
-    return { r: new Uint8Array(r.toArray()), s: new Uint8Array(s.toArray()) }
-}
+        const d = new BN(secretKey).mod(n);
+        if(d.lten(0) || d.gte(n)) throw new Error("Invalid private key");
+        let h = curve.hashToField(digest);
+        if(h.is0()) h = curve.Field.get1();
+        const Fe = curve.Point.BASE.mul(new curve.Field(e)).x;
+        const r = h.mulmod(Fe).value;
+        if (r.isZero()) return sign(secretKey, digest, rand);
+        const s = e.add(d.mul(r)).mod(n);
+        if (s.isZero()) return sign(secretKey, digest, rand);
 
-/**
- * Verify signature of provided digest
- * @param parameters Curve parameters
- * @param publicKey Public key
- * @param digest Digest to verify
- * @param signature Signature
- */
-export const verify = (
-    parameters: DSTUParameters,
-    publicKey: PublicKey,
-    digest: TArg<Uint8Array>,
-    signature: Signature
-) => {
-    const curve = new Curve(parameters);
-    const Q = new Point(
-        Field.fromU8(publicKey.x, curve),
-        Field.fromU8(publicKey.y, curve),
-    );
-    const _r = Field.fromU8(signature.r), _s = Field.fromU8(signature.s);
+        return concatBytes(
+            new Uint8Array(r.toArray("be", curve.lengths.scalarByteLength)),
+            new Uint8Array(s.toArray("be", curve.lengths.scalarByteLength))
+        )
+    }
 
-    // h = hash_to_field(H(T))
-    const h = Field.hashToField(curve, digest);
-    // R = sP + rQ
-    const R = curve.base.mul(_s).add(Q.mul(_r));
-    // y = h * R.x
-    const y = h.mulmod(R.x);
+    const verify = (
+        publicKey: TArg<Uint8Array>,
+        digest: TArg<Uint8Array>,
+        signature: TArg<Uint8Array>
+    ): boolean => {
+        if(signature.length != curve.lengths.signatureByteLength) throw new Error("Invalid signature length");
+        const Q = curve.Point.fromBytes(publicKey);
+        const _r = curve.Field.fromBytes(signature.subarray(0, curve.lengths.scalarByteLength)),
+            _s = curve.Field.fromBytes(signature.subarray(curve.lengths.scalarByteLength));
 
-    return y.value.eq(_r.value);
-}
+        const h = curve.hashToField(digest);
+        const R = curve.Point.BASE.mul(_s).add(Q.mul(_r));
+        const y = h.mulmod(R.x);
 
-/** Decompress point */
-export const decompressPoint = (parameters: DSTUParameters, x: TArg<Uint8Array>): Point => {
-    const curve = new Curve(parameters);
+        return y.value.eq(_r.value);
+    }
 
-    return curve.expand(Field.fromU8(x, curve));
+    /** Decompress point */
+    const decompressPoint = (x: TArg<Uint8Array>) => curve.expand(curve.Field.fromBytes(x));
+
+    return Object.freeze({
+        getPublicKey,
+        sign,
+        verify,
+        decompressPoint,
+        lengths: curve.lengths,
+        Point: curve.Point
+    });
 }
 
 export * from "./const.js";
+
+//const dstu = dstu4145(DSTU_163_TEST);
+//console.log(dstu.Point.fromBytes(hexToBytes("057DE7FDE023FF929CB6AC785CE4B79CF64ABDC2DA")))

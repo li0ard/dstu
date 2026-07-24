@@ -1,5 +1,3 @@
-import type { TRet } from "@noble/hashes/utils.js";
-
 export interface DSTUParameters {
     a: number;
     b: string;
@@ -10,22 +8,12 @@ export interface DSTUParameters {
     ks: number[];
 }
 
-export interface PublicKey {
-    x: TRet<Uint8Array>,
-    y: TRet<Uint8Array>
-}
-
-export interface Signature {
-    r: TRet<Uint8Array>,
-    s: TRet<Uint8Array>
-}
-
 export const DSTU_163_TEST: DSTUParameters = {
     a: 1,
-    b: "5FF6108462A2DC8210AB403925E638A19C1455D21",
-    order: "400000000000000000002BEC12BE2262D39BCF14D",
-    Gx: "72D867F93A93AC27DF9FF01AFFE74885C8C540420",
-    Gy: "0224A9C3947852B97C5599D5F4AB81122ADC3FD9B",
+    b: "05FF6108462A2DC8210AB403925E638A19C1455D21",
+    order: "0400000000000000000002BEC12BE2262D39BCF14D",
+    Gx: "072D867F93A93AC27DF9FF01AFFE74885C8C540420",
+    Gy: "00224A9C3947852B97C5599D5F4AB81122ADC3FD9B",
     m: 163,
     ks: [7,6,3]
 }
