@@ -187,17 +187,15 @@ export abstract class Kalyna implements Cipher {
         if(block.length != this.blockSize)
             throw new Error(`Incorrect length (need - ${this.blockSize}, got - ${block.length})`);
         const t1 = new BigUint64Array(this.N), t2 = new BigUint64Array(this.N);
-        const rk = this.erk.slice();
-
-        this.addkey(bytesToUint64sLE(block), t1, rk);
+        this.addkey(bytesToUint64sLE(block), t1, this.erk);
 
         for (let i = 0; i < this.numRounds; i++) {
-            const roundKey = rk.subarray(this.N + i * this.N);
+            const roundKey = this.erk.subarray(this.N + i * this.N);
             if (i % 2 === 0) this.G(t1, t2, roundKey);
             else this.G(t2, t1, roundKey);
         }
 
-        this.GL(t2, t1, rk.subarray(this.glOffset));
+        this.GL(t2, t1, this.erk.subarray(this.glOffset));
         return uint64sToBytesLE(t1);
     }
 
@@ -206,18 +204,16 @@ export abstract class Kalyna implements Cipher {
         if(block.length != this.blockSize)
             throw new Error(`Incorrect length (need - ${this.blockSize}, got - ${block.length})`);
         const t1 = new BigUint64Array(this.N), t2 = new BigUint64Array(this.N);
-        const rk = this.drk.slice();
-
-        this.subkey(bytesToUint64sLE(block), t1, rk.subarray(this.glOffset));
+        this.subkey(bytesToUint64sLE(block), t1, this.drk.subarray(this.glOffset));
         this.IMC(t1);
 
         for (let i = 0; i < this.numRounds; i++) {
-            const roundKey = rk.subarray(this.glOffset - this.N - i * this.N);
+            const roundKey = this.drk.subarray(this.glOffset - this.N - i * this.N);
             if (i % 2 === 0) this.IG(t1, t2, roundKey);
             else this.IG(t2, t1, roundKey);
         }
 
-        this.IGL(t2, t1, rk);
+        this.IGL(t2, t1, this.drk);
         return uint64sToBytesLE(t1);
     }
 }

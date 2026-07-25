@@ -13,7 +13,7 @@ export const gcm = (cipher: Kalyna, iv: TArg<Uint8Array>, q = 16): AEADMode => {
             return concatBytes(enc, gmac(cipher, q).compute(aad || new Uint8Array(), enc));
         },
         open: (ciphertext: TArg<Uint8Array>, aad?: TArg<Uint8Array>): TRet<Uint8Array> => {
-            const enc = ciphertext.slice(0, -q);
+            const enc = ciphertext.subarray(0, -q);
             const hC = gmac(cipher, q).compute(aad || new Uint8Array(), enc);
             if(!equalBytes(ciphertext.subarray(-q), hC))
                 throw new Error("Invalid MAC");

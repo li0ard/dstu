@@ -388,35 +388,29 @@ export class Strumok {
         return out;
     }
 
-    /**
-     * Perform encryption/decryption
-     * @param in_ Input data
-     */
-    crypt(in_: TArg<Uint8Array>): TRet<Uint8Array> {
-        const inl = in_.length;
-        const out = new Uint8Array(inl);
-        let inOffset = 0;
-        let outOffset = 0;
+    /** Perform encryption/decryption */
+    crypt(msg: TArg<Uint8Array>): TRet<Uint8Array> {
+        const out = new Uint8Array(msg.length);
+        let inOffset = 0, outOffset = 0;
 
-        const blockBuffer = new ArrayBuffer(this.blockSize);
-        const block64 = new BigUint64Array(blockBuffer);
-        const block8 = new Uint8Array(blockBuffer);
-        while (inl - inOffset >= this.blockSize) {
-            block8.set(in_.slice(inOffset, inOffset + this.blockSize));
+        const blockBuffer = new ArrayBuffer(this.blockSize),
+            block = new BigUint64Array(blockBuffer),
+            block8 = new Uint8Array(blockBuffer);
+        while (msg.length - inOffset >= this.blockSize) {
+            block8.set(msg.subarray(inOffset, inOffset + this.blockSize));
         
-            const encrypted8 = new Uint8Array(this.next_stream_full_crypt(block64).buffer, 0, this.blockSize);
-            out.set(encrypted8, outOffset);
+            const encrypted = new Uint8Array(this.next_stream_full_crypt(block).buffer, 0, this.blockSize);
+            out.set(encrypted, outOffset);
         
             inOffset += this.blockSize;
             outOffset += this.blockSize;
         }
 
-        if (inOffset < inl) {
-            const remaining = inl - inOffset;
+        if (inOffset < msg.length) {
             const keystream = new Uint8Array(this.next_stream().buffer, 0, this.blockSize);
         
-            for (let i = 0; i < remaining; i++)
-                out[outOffset + i] = in_[inOffset + i] ^ keystream[i];
+            for (let i = 0; i < msg.length - inOffset; i++)
+                out[outOffset + i] = msg[inOffset + i] ^ keystream[i];
         }
 
         return out;
