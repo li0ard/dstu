@@ -30,6 +30,9 @@
     "docs": "typedoc --options .config/typedoc/config.cjs"
   },
   "devDependencies": {
+    "@li0ard/gost": "^0.2.0",
+    "@peculiar/asn1-schema": "^2.8.0",
+    "@peculiar/asn1-x509": "^2.8.0",
     "@types/bn.js": "^5.2.0",
     "@types/bun": "latest",
     "typedoc": "^0.28.19"

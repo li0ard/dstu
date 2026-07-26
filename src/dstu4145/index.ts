@@ -1,37 +1,59 @@
-import { concatBytes, hexToBytes, randomBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { DSTU_163_TEST, type DSTUParameters } from "./const.js";
+import { concatBytes, randomBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { 
+    DSTU_163, DSTU_163_TEST, DSTU_167,
+    DSTU_173, DSTU_179, DSTU_191,
+    DSTU_233, DSTU_257, DSTU_307,
+    DSTU_367, DSTU_431,
+    type DSTUParameters
+} from "./const.js";
 import { binaryWeierstrass } from "./ec/index.js";
-import { BN } from "bn.js";
+import BN from "bn.js";
 
+/** Create DSTU 4145-2002 signer (Big-Endian) */
 export const dstu4145 = (parameters: DSTUParameters) => {
     const curve = binaryWeierstrass(parameters);
-    const n = new BN(curve.ORDER.value);
+    const k = curve.ORDER.getLength() - 1;
 
-    const getPublicKey = (secretKey: TArg<Uint8Array>): TRet<Uint8Array> =>
-        curve.Point.BASE.mul(curve.Field.fromBytes(secretKey)).negate().toBytes();
+    const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> =>
+        curve.Point.BASE.mul(curve.Field.fromBytes(secretKey)).negate().toBytes(isCompressed);
+
+    const randomPrivateKey = (): TRet<Uint8Array> => new Uint8Array(
+        new BN(randomBytes(curve.lengths.scalarByteLength))
+        .maskn(k)
+        .toArray("be", curve.lengths.scalarByteLength)
+    );
+
+    const computePresign = (rand?: TArg<Uint8Array>) => {
+        const e = (rand
+            ? new BN(rand)
+            : new BN(randomBytes(curve.lengths.scalarByteLength))
+        ).maskn(k);
+        if(e.isZero()) return computePresign(rand);
+        const xR = curve.Point.BASE.mul(new curve.Field(e)).x;
+        if(xR.is0()) return computePresign(rand);
+
+        return { Fe: xR, e }
+    }
 
     const sign = (
         secretKey: TArg<Uint8Array>,
         digest: TArg<Uint8Array>,
         rand?: TArg<Uint8Array>
     ): TRet<Uint8Array> => {
-        let e = rand ? new BN(rand).mod(n) : new BN(randomBytes(Math.ceil(curve.parameters.m / 8))).mod(n);
-        if (e.isZero()) e = new BN(1);
-
-        const d = new BN(secretKey).mod(n);
-        if(d.lten(0) || d.gte(n)) throw new Error("Invalid private key");
+        const d = new BN(secretKey).mod(curve.ORDER.value);
         let h = curve.hashToField(digest);
         if(h.is0()) h = curve.Field.get1();
-        const Fe = curve.Point.BASE.mul(new curve.Field(e)).x;
-        const r = h.mulmod(Fe).value;
+
+        const { Fe, e } = computePresign(rand);
+        const r = h.mul(Fe).value.maskn(k);
         if (r.isZero()) return sign(secretKey, digest, rand);
-        const s = e.add(d.mul(r)).mod(n);
+        const s = e.add(d.mul(r)).mod(curve.ORDER.value);
         if (s.isZero()) return sign(secretKey, digest, rand);
 
         return concatBytes(
-            new Uint8Array(r.toArray("be", curve.lengths.scalarByteLength)),
-            new Uint8Array(s.toArray("be", curve.lengths.scalarByteLength))
-        )
+            new Uint8Array(s.toArray("be", curve.lengths.scalarByteLength)),
+            new Uint8Array(r.toArray("be", curve.lengths.scalarByteLength))
+        );
     }
 
     const verify = (
@@ -41,30 +63,58 @@ export const dstu4145 = (parameters: DSTUParameters) => {
     ): boolean => {
         if(signature.length != curve.lengths.signatureByteLength) throw new Error("Invalid signature length");
         const Q = curve.Point.fromBytes(publicKey);
-        const _r = curve.Field.fromBytes(signature.subarray(0, curve.lengths.scalarByteLength)),
-            _s = curve.Field.fromBytes(signature.subarray(curve.lengths.scalarByteLength));
+        const _s = curve.Field.fromBytes(signature.subarray(0, curve.lengths.scalarByteLength)),
+            _r = curve.Field.fromBytes(signature.subarray(curve.lengths.scalarByteLength));
+        if (_s.value.isZero() || _s.value.gte(curve.ORDER.value)
+            || _r.value.isZero() || _r.value.gte(curve.ORDER.value)
+        ) return false;
 
         const h = curve.hashToField(digest);
-        const R = curve.Point.BASE.mul(_s).add(Q.mul(_r));
-        const y = h.mulmod(R.x);
+        const R = curve.Point.BASE.mulWnaf(_s).add(Q.mulWnaf(_r));
+        const y = h.mul(R.x).value.maskn(k);
 
-        return y.value.eq(_r.value);
+        return y.eq(_r.value);
     }
 
-    /** Decompress point */
-    const decompressPoint = (x: TArg<Uint8Array>) => curve.expand(curve.Field.fromBytes(x));
+    const keygen = (isCompressed = false): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
+        const secretKey = randomPrivateKey();
+        const publicKey = getPublicKey(secretKey, isCompressed);
+
+        return { secretKey, publicKey }
+    }
 
     return Object.freeze({
         getPublicKey,
         sign,
         verify,
-        decompressPoint,
+        keygen,
         lengths: curve.lengths,
         Point: curve.Point
     });
 }
 
 export * from "./const.js";
+export * from "./ec/expand.js";
 
-//const dstu = dstu4145(DSTU_163_TEST);
-//console.log(dstu.Point.fromBytes(hexToBytes("057DE7FDE023FF929CB6AC785CE4B79CF64ABDC2DA")))
+/** DSTU 4145-2002 163 bit curve */
+export const dstu163 = dstu4145(DSTU_163);
+/** DSTU 4145-2002 163 bit curve (for testing) */
+export const dstu163Test = dstu4145(DSTU_163_TEST);
+/** DSTU 4145-2002 167 bit curve */
+export const dstu167 = dstu4145(DSTU_167);
+/** DSTU 4145-2002 173 bit curve */
+export const dstu173 = dstu4145(DSTU_173);
+/** DSTU 4145-2002 179 bit curve */
+export const dstu179 = dstu4145(DSTU_179);
+/** DSTU 4145-2002 191 bit curve */
+export const dstu191 = dstu4145(DSTU_191);
+/** DSTU 4145-2002 233 bit curve */
+export const dstu233 = dstu4145(DSTU_233);
+/** DSTU 4145-2002 257 bit curve */
+export const dstu257 = dstu4145(DSTU_257);
+/** DSTU 4145-2002 307 bit curve */
+export const dstu307 = dstu4145(DSTU_307);
+/** DSTU 4145-2002 367 bit curve */
+export const dstu367 = dstu4145(DSTU_367);
+/** DSTU 4145-2002 431 bit curve */
+export const dstu431 = dstu4145(DSTU_431);

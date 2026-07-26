@@ -1,10 +1,19 @@
 import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { DSTUParameters } from "../const.js";
 import BN from "bn.js";
+import { bitLength, getWindowSize, windowNaf } from "./wnaf.js";
 
-export const binaryWeierstrass = (
-    parameters: DSTUParameters
-) => {
+export const computeMod = (m: number, ks: number[]): BN => {
+    const modulo = new BN(0);
+    modulo.setn(m, 1);
+    modulo.setn(0, 1);
+    for (const i of ks) modulo.setn(i, 1);
+
+    return modulo;
+}
+
+export const binaryWeierstrass = (parameters: DSTUParameters) => {
+    // GF(2^m) operations
     class Field {
         constructor(public value: BN = new BN(0)) {}
 
@@ -29,63 +38,38 @@ export const binaryWeierstrass = (
 
         mod(): Field {
             const cmp = this.compare(modulo);
-
             if (cmp === 0) return Field.get0();
             if (cmp < 0) return this.clone();
-            return this.div(modulo)[1];
+            
+            let bag: Field = this;
+            const vl = modulo.getLength();
+            while (true) {
+                bag = bag.add(modulo.shiftLeft(bag.getLength() - vl));
+                if (bag.getLength() < vl) return bag;
+            }
         }
 
         mul(v: Field): Field {
             let bag = Field.get0();
-            let shift = this.clone();
+            let shift: Field = this;
             const vLen = v.getLength();
 
             for (let i = 0; i < vLen; i++) {
                 if (v.testBit(i) == 1) bag = bag.add(shift);
                 shift = shift.shiftLeft(1);
             }
-            return bag;
+            return bag.mod();
         }
 
         trace(): number {
-            let t = this.clone();
-            for (let i = 1; i < parameters.m; i++) t = t.mulmod(t).add(this);
+            let t: Field = this;
+            for (let i = 1; i < parameters.m; i++) t = t.mul(t).add(this);
             return t.testBit(0);
         }
 
-        mulmod(v: Field): Field { return this.mul(v).mod(); }
-
-        div(v: Field): [Field, Field] {
-            let res = '';
-            const c = this.compare(v);
-
-            if (c === 0) return [Field.get1(), Field.get0()];
-            if (c < 0) return [Field.get0(), this.clone()];
-
-            let bag = this.clone();
-            const vl = v.getLength();
-            while (true) {
-                const bl = bag.getLength();
-                const shift = v.clone().shiftLeft(bl - vl);
-                bag = bag.add(shift);
-                res += "1";
-
-                const blnew = bag.getLength();
-                const bdiff = bl - blnew;
-
-                if (blnew < vl) {
-                    res += '0'.repeat(bl - vl);
-                    return [Field.fromString(res, 2), bag];
-                }
-                if (bdiff > 1) res += '0'.repeat(bdiff - 1);
-            }
-        }
-
         invert(): Field {
-            let r = this.mod();
-            let s = modulo.clone();
-            let u = Field.get1();
-            let v = Field.get0();
+            let r = this.mod(), s = modulo;
+            let u = Field.get1(), v = Field.get0();
 
             while (r.getLength() > 1) {
                 let j = s.getLength() - r.getLength();
@@ -100,88 +84,90 @@ export const binaryWeierstrass = (
             return u;
         }
 
-        toBytes(length?: number): TRet<Uint8Array> {
-            return new Uint8Array(this.value.toArray("be", length));
+        fsquad(): Field {
+            const range_to = Math.floor((parameters.m - 1) / 2);
+            const val_a = this.mod();
+
+            let val_z = val_a.clone();
+            for (let idx = 1; idx <= range_to; idx++) {
+                val_z = val_z.mul(val_z);
+                val_z = val_z.mul(val_z).add(val_a);
+            }
+
+            const val_w = val_z.mul(val_z).add(val_z);
+            if (val_w.compare(val_a) == 0) return val_z.mod();
+            throw new Error("squad eq fail: no square root exists");
         }
 
-        static fromString(str: string, base: number): Field {
-            return new Field(new BN(str, base));
-        }
+        toBytes(length?: number): TRet<Uint8Array> { return new Uint8Array(this.value.toArray("be", length)); }
 
-        static fromBytes(v: Uint8Array) {
-            return new Field(new BN(v, 16));
-        }
+        static fromString(str: string): Field { return new Field(new BN(str, 16)); }
+        static fromBytes(v: Uint8Array) { return new Field(new BN(v, 16)); }
 
-        static get0(): Field {
-            return new Field(new BN(0));
-        }
-
-        static get1(): Field {
-            return new Field(new BN(1));
-        }
+        static get0(): Field { return new Field(new BN(0)); }
+        static get1(): Field { return new Field(new BN(1)); }
     }
 
-    const order = Field.fromString(parameters.order, 16);
-    const b = Field.fromString(parameters.b, 16);
+    // Convert `n` and `b` to `Field`
+    const order = Field.fromString(parameters.order);
+    const b = Field.fromString(parameters.b);
 
-    const modulo = Field.get0();
-    modulo.setBit(parameters.m, 1);
-    modulo.setBit(0, 1);
-    for (const i of parameters.ks) modulo.setBit(i, 1);
+    // Compute modulo from `m` and `ks` coefficients
+    const modulo: Readonly<Field> = new Field(computeMod(parameters.m, parameters.ks));
 
+    // Compute values length
     const fieldByteLength = Math.ceil(parameters.m / 8),
         scalarByteLength = Math.ceil(order.getLength() / 8),
         pointByteLength = fieldByteLength * 2,
         signatureByteLength = scalarByteLength * 2;
+    const lengths = Object.freeze({ fieldByteLength, pointByteLength, scalarByteLength, signatureByteLength });
 
+    // Point operations
     class Point {
         static BASE = new Point(
-            Field.fromString(parameters.Gx, 16),
-            Field.fromString(parameters.Gy, 16)
+            Field.fromString(parameters.Gx),
+            Field.fromString(parameters.Gy)
         );
+        static ZERO = new Point(Field.get0(), Field.get0());
+ 
+        private _precomp?: { pos: Point[]; neg: Point[] };
+        private _double?: Point;
         constructor(public x: Field, public y: Field) {}
 
         add(p: Point): Point {
-            const pz = new Point(Field.get0(), Field.get0());
-            const x0 = this.x.clone();
-            const y0 = this.y.clone();
-            const x1 = p.x.clone();
-            const y1 = p.y.clone();
+            const pz = Point.ZERO.clone();
+            const x0 = this.x.clone(), y0 = this.y.clone();
+            const x1 = p.x.clone(), y1 = p.y.clone();
 
             if (this.iszero()) return p;
             if (p.iszero()) return this;
 
             let lbd: Field, x2: Field;
             if (x0.compare(x1) !== 0) {
-                const tmp = y0.add(y1);
-                const tmp2 = x0.add(x1);
-                lbd = tmp.mulmod(tmp2.invert(), );
+                const tmp = y0.add(y1), tmp2 = x0.add(x1);
+                lbd = tmp.mul(tmp2.invert());
 
-                x2 = lbd.mulmod(lbd);
+                x2 = lbd.mul(lbd);
                 if (parameters.a === 1) x2.setBit(0, 1 ^ x2.testBit(0));
-                x2 = x2.add(lbd);
-                x2 = x2.add(x0);
-                x2 = x2.add(x1);
+                x2 = x2.add(lbd).add(x0).add(x1);
             } else {
                 if (y1.compare(y0) !== 0) return pz;
                 if (x1.compare(Field.get0()) === 0) return pz;
-                lbd = x1.add(p.y.mulmod(p.x.invert()));
-                x2 = lbd.mulmod(lbd);
+                lbd = x1.add(p.y.mul(p.x.invert()));
+                x2 = lbd.mul(lbd);
                 if (parameters.a === 1) x2.setBit(0, 1 ^ x2.testBit(0));
                 x2 = x2.add(lbd);
             }
 
-            let y2 = lbd.mulmod(x1.add(x2));
-            y2 = y2.add(x2);
-            y2 = y2.add(y1);
+            const y2 = lbd.mul(x1.add(x2)).add(x2).add(y1);
 
-            pz.x = x2.clone();
-            pz.y = y2.clone();
+            pz.x = x2;
+            pz.y = y2;
             return pz;
         }
 
         mul(f: Field): Point {
-            let pz = new Point(Field.get0(), Field.get0());
+            let pz = Point.ZERO.clone();
             let p = this.clone();
 
             for (let j = f.getLength() - 1; j >= 0; j--) {
@@ -196,21 +182,15 @@ export const binaryWeierstrass = (
             return pz;
         }
 
-        negate(): Point {
-            return new Point(this.x, this.x.add(this.y));
-        }
+        negate(): Point { return new Point(this.x, this.x.add(this.y)); }
 
-        clone(): Point {
-            return new Point(this.x, this.y);
-        }
+        clone(): Point { return new Point(this.x, this.y); }
 
-        iszero(): boolean {
-            return this.x.is0() && this.y.is0();
-        }
+        iszero(): boolean { return this.x.is0() && this.y.is0(); }
 
         compress(): Field {
             const x_inv = this.x.invert();
-            const tmp = x_inv.mulmod(this.y);
+            const tmp = x_inv.mul(this.y);
             const trace = tmp.trace();
 
             this.x.setBit(0, trace == 1 ? 1 : 0);
@@ -226,72 +206,130 @@ export const binaryWeierstrass = (
             );
         }
 
+        double(): Point { return this.add(this); }
+ 
+        timesPow2(e: number): Point {
+            let r: Point = this;
+            for (let i = 0; i < e; i++) r = r.double();
+            return r;
+        }
+
+        private precomp(width: number): { pos: Point[]; neg: Point[] } {
+            if (!this._precomp) this._precomp = { pos: [this], neg: [] };
+
+            const pos = this._precomp.pos, neg = this._precomp.neg;
+            if (!neg[0]) neg[0] = pos[0].negate();
+ 
+            const len = 1 << Math.max(0, width - 2);
+            if (len === 1) return { pos, neg };
+ 
+            const twice = this._double ?? (this._double = this.double());
+            for (let i = pos.length; i < len; i++) {
+                pos[i] = twice.add(pos[i - 1]);
+                neg[i] = pos[i].negate();
+            }
+ 
+            return { pos, neg };
+        }
+
+        mulWnaf(f: Field): Point {
+            let width = getWindowSize(f.value.bitLength());
+            width = Math.max(2, Math.min(16, width));
+ 
+            const { pos, neg } = this.precomp(width);
+            const wnaf = windowNaf(width, f.value);
+ 
+            let R: Point = Point.ZERO;
+            let i = wnaf.length;
+            if (i > 1) {
+                const wi = wnaf[--i];
+                const digit = wi >> 16;
+                let zeroes = wi & 0xffff;
+ 
+                const n = Math.abs(digit);
+                const table = digit < 0 ? neg : pos;
+ 
+                if ((n << 2) < (1 << width)) {
+                    const highest = bitLength(n);
+                    const scale = width - highest;
+                    const lowBits = n ^ (1 << (highest - 1));
+ 
+                    const i1 = (1 << (width - 1)) - 1;
+                    const i2 = (lowBits << scale) + 1;
+                    R = table[i1 >>> 1].add(table[i2 >>> 1]);
+ 
+                    zeroes -= scale;
+                }
+                else R = table[n >>> 1];
+
+                R = R.timesPow2(zeroes);
+            }
+
+            while (i > 0) {
+                const wi = wnaf[--i];
+                const digit = wi >> 16;
+ 
+                const table = digit < 0 ? neg : pos; 
+                R = R.double().add(table[Math.abs(digit) >>> 1]);
+                R = R.timesPow2(wi & 0xffff);
+            }
+
+            return R;
+        }
+
+        static expand(x: Field): Point {
+            const bit = x.testBit(0);
+            const xClean = x.clone();
+            xClean.setBit(0, 0);
+
+            const traceX = xClean.trace();
+            const a = parameters.a ?? 0;
+            if ((traceX === 1 && a === 0) || (traceX === 0 && a === 1)) xClean.setBit(0, 1);
+
+            const x2 = xClean.mul(xClean);
+            let rhs = x2.mul(xClean);
+            if (a === 1) rhs = rhs.add(x2);
+            if (b) rhs = rhs.add(b);
+
+            const x2inv = x2.invert();
+            const c = rhs.mul(x2inv);
+            const z = c.fsquad();
+
+            const traceZ = z.trace();
+            if ((traceZ === 0 && bit === 1) || (traceZ === 1 && bit === 0)) {
+                const currentBit = z.testBit(0);
+                z.setBit(0, 1 ^ currentBit);
+            }
+
+            return new Point(xClean, z.mul(xClean));
+        }
+
         static fromBytes(bytes: TArg<Uint8Array>): Point {
             if(bytes.length == pointByteLength) return new Point(
                 Field.fromBytes(bytes.subarray(0, fieldByteLength)),
                 Field.fromBytes(bytes.subarray(fieldByteLength))
             );
             else if(bytes.length == fieldByteLength)
-                return expand(Field.fromBytes(bytes));
+                return Point.expand(Field.fromBytes(bytes));
             else
                 throw new Error(`Invalid bytes length. Must be ${pointByteLength} for uncompressed and ${fieldByteLength} for compressed`);
         }
     }
 
-    const hashToField = (hash: TArg<Uint8Array>) => new Field(new BN(hash).maskn(parameters.m));
-
-    const fsquad = (v: Field): Field => {
-        const range_to = Math.floor((parameters.m - 1) / 2);
-        const val_a = v.mod();
-        
-        let val_z = val_a.clone();
-        for (let idx = 1; idx <= range_to; idx++) {
-            val_z = val_z.mulmod(val_z);
-            val_z = val_z.mulmod(val_z);
-            val_z = val_z.add(val_a);
-        }
-        
-        const val_w = val_z.mulmod(val_z).add(val_z);
-        if (val_w.compare(val_a) == 0) return val_z.mod();
-        throw new Error("squad eq fail: no square root exists");
+    // Utils
+    const hashToField = (hash: TArg<Uint8Array>): Field => {
+        const bn = new BN(hash);
+        const k = Math.min(parameters.m, bn.bitLength());
+        return new Field(bn.maskn(k));
     }
 
-    const expand = (x: Field): Point => {
-        const bit = x.testBit(0);
-        const xClean = x.clone();
-        xClean.setBit(0, 0);
-        
-        const traceX = xClean.trace();
-        const a = parameters.a ?? 0;
-        if ((traceX === 1 && a === 0) || (traceX === 0 && a === 1)) xClean.setBit(0, 1);
-        
-        const x2 = xClean.mulmod(xClean);
-        let rhs = x2.mulmod(xClean);
-        if (a === 1) rhs = rhs.add(x2);
-        if (b) rhs = rhs.add(b);
-        
-        const x2inv = x2.invert();
-        const c = rhs.mulmod(x2inv);
-        
-        const z = fsquad(c);
- 
-        const traceZ = z.trace();
-        if ((traceZ === 0 && bit === 1) || (traceZ === 1 && bit === 0)) {
-            const currentBit = z.testBit(0);
-            z.setBit(0, 1 ^ currentBit);
-        }
- 
-        const y = z.mulmod(xClean);
- 
-        return new Point(xClean, y);
-    }
-
-    const lengths = Object.freeze({ fieldByteLength, pointByteLength, scalarByteLength, signatureByteLength });
+    // precompute
+    Point.BASE.mulWnaf(new Field(new BN(3)));
 
     return Object.freeze({
         Field, Point,
         ORDER: order, MODULO: modulo,
         parameters, lengths,
-        expand, hashToField
+        hashToField
     });
 }
