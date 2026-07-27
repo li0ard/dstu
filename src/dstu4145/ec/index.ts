@@ -2,6 +2,7 @@ import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { DSTUParameters } from "../const.js";
 import BN from "bn.js";
 import { bitLength, getWindowSize, windowNaf } from "./wnaf.js";
+import { init_onb_parameters } from "./onb.js";
 
 export const computeMod = (m: number, ks: number[]): BN => {
     const modulo = new BN(0);
@@ -61,10 +62,16 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return bag.mod();
         }
 
-        trace(): number {
+        trace(): 0 | 1 {
             let t: Field = this;
             for (let i = 1; i < parameters.m; i++) t = t.mul(t).add(this);
             return t.testBit(0);
+        }
+
+        traceOnb (): 0 | 1 {
+            let t = 0;
+            for (let i = 0; i < parameters.m; i++) t ^= this.testBit(i);
+            return t as 0 | 1;
         }
 
         invert(): Field {
@@ -108,9 +115,15 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
         static get1(): Field { return new Field(new BN(1)); }
     }
 
+    const onb = parameters.onb ? init_onb_parameters(parameters) : undefined;
+    // Convert ONB to PB (if needed)
+    const toInternal = (f: Field): Field => onb ? new Field(onb.onbToPb(f.value)) : f.clone();
+    // Convert PB to ONB (if needed)
+    const toExternal = (f: Field): Field => onb ? new Field(onb.pbToOnb(f.value)) : f.clone();
+
     // Convert `n` and `b` to `Field`
     const order = Field.fromString(parameters.order);
-    const b = Field.fromString(parameters.b);
+    const b = toInternal(Field.fromString(parameters.b));
 
     // Compute modulo from `m` and `ks` coefficients
     const modulo = new Field(computeMod(parameters.m, parameters.ks));
@@ -125,13 +138,13 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
     // Point operations
     class Point {
         static BASE = new Point(
-            Field.fromString(parameters.Gx),
-            Field.fromString(parameters.Gy)
+            toInternal(Field.fromString(parameters.Gx)),
+            toInternal(Field.fromString(parameters.Gy))
         );
         static ZERO = new Point(Field.get0(), Field.get0());
  
-        private _precomp?: { pos: Point[]; neg: Point[] };
-        private _double?: Point;
+        _precomp?: { pos: Point[]; neg: Point[] };
+        _double?: Point;
         constructor(public x: Field, public y: Field) {}
 
         add(p: Point): Point {
@@ -193,16 +206,17 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             const tmp = x_inv.mul(this.y);
             const trace = tmp.trace();
 
-            this.x.setBit(0, trace == 1 ? 1 : 0);
-            return this.x;
+            const xExt = toExternal(this.x);
+            xExt.setBit(0, trace);
+            return xExt;
         }
 
         toBytes(isCompressed = false): TRet<Uint8Array> {
             if(isCompressed) return this.compress().toBytes(fieldByteLength);
 
             return concatBytes(
-                this.x.toBytes(fieldByteLength),
-                this.y.toBytes(fieldByteLength),
+                toExternal(this.x).toBytes(fieldByteLength),
+                toExternal(this.y).toBytes(fieldByteLength),
             );
         }
 
@@ -214,7 +228,7 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return r;
         }
 
-        private precomp(width: number): { pos: Point[]; neg: Point[] } {
+        precomp(width: number): { pos: Point[]; neg: Point[] } {
             if (!this._precomp) this._precomp = { pos: [this], neg: [] };
 
             const pos = this._precomp.pos, neg = this._precomp.neg;
@@ -277,14 +291,16 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return R;
         }
 
-        static expand(x: Field): Point {
-            const bit = x.testBit(0);
-            const xClean = x.clone();
-            xClean.setBit(0, 0);
+        static expand(xExt: Field): Point {
+            const bit = xExt.testBit(0);
+            const xCleanExt = xExt.clone();
+            xCleanExt.setBit(0, 0);
 
-            const traceX = xClean.trace();
             const a = parameters.a ?? 0;
-            if ((traceX === 1 && a === 0) || (traceX === 0 && a === 1)) xClean.setBit(0, 1);
+            const traceX = onb ? xCleanExt.traceOnb() : xCleanExt.trace();
+            if ((traceX === 1 && a === 0) || (traceX === 0 && a === 1)) xCleanExt.setBit(0, 1);
+
+            const xClean = toInternal(xCleanExt);
 
             const x2 = xClean.mul(xClean);
             let rhs = x2.mul(xClean);
@@ -306,8 +322,8 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
 
         static fromBytes(bytes: TArg<Uint8Array>): Point {
             if(bytes.length == pointByteLength) return new Point(
-                Field.fromBytes(bytes.subarray(0, fieldByteLength)),
-                Field.fromBytes(bytes.subarray(fieldByteLength))
+                toInternal(Field.fromBytes(bytes.subarray(0, fieldByteLength))),
+                toInternal(Field.fromBytes(bytes.subarray(fieldByteLength)))
             );
             else if(bytes.length == fieldByteLength)
                 return Point.expand(Field.fromBytes(bytes));
@@ -330,6 +346,9 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
         Field, Point,
         ORDER: order, MODULO: modulo,
         parameters, lengths,
-        hashToField
+        hashToField,
+        isOnb: !!onb,
+        toInternalField: toInternal,
+        toExternalField: toExternal
     });
 }

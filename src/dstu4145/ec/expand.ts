@@ -1,6 +1,7 @@
 import BN from "bn.js";
 import type { DSTUShortParameters } from "../const.js";
 import { computeMod } from "./index.js";
+import { init_onb_parameters } from "./onb.js";
 
 class Field {
     constructor(public value: BN = new BN(0)) {}
@@ -24,7 +25,15 @@ export const expandPoint = (
     params: DSTUShortParameters
 ): { x: Uint8Array; y: Uint8Array } => {
     const { m, ks, a } = params;
-    const b = new Field(new BN(params.b, 16));
+    let converter;
+    if(params.onb) converter = init_onb_parameters(params);
+
+    const bInt = new BN(params.b, 16);
+
+    const b = new Field(params.onb
+        ? converter!.onbToPb(bInt)
+        : bInt
+    );
 
     const modulo = new Field(computeMod(m, ks));
     const fieldByteLength = Math.ceil(m / 8);
@@ -58,6 +67,12 @@ export const expandPoint = (
         let t: Field = x;
         for (let i = 1; i < m; i++) t = mul(t, t).add(x);
         return t.testBit(0);
+    }
+
+    const traceOnb = (x: Field, m: number): number => {
+        let t = 0;
+        for (let i = 0; i < m; i++) t ^= x.value.testn(i) ? 1 : 0;
+        return t;
     }
 
     const invert = (f: Field): Field => {
@@ -94,11 +109,14 @@ export const expandPoint = (
 
     const x = new Field(new BN(xBytes));
     const bit = x.testBit(0);
-    const xClean = x.clone();
+    let xClean = x.clone();
     xClean.setBit(0, 0);
 
-    const traceX = trace(xClean);
+    const traceX = params.onb ? traceOnb(xClean, m) : trace(xClean);
     if ((traceX === 1 && a === 0) || (traceX === 0 && a === 1)) xClean.setBit(0, 1);
+
+    const qxOut = xClean.clone();
+    if (params.onb) xClean = new Field(converter!.onbToPb(xClean.value));
 
     const x2 = mul(xClean, xClean);
     let rhs = mul(x2, xClean);
@@ -115,10 +133,11 @@ export const expandPoint = (
         z.setBit(0, 1 ^ currentBit);
     }
 
-    const y = mul(z, xClean);
+    let y = mul(z, xClean);
+    if (params.onb) y = new Field(converter!.pbToOnb(y.value));
 
     return {
-        x: new Uint8Array(xClean.value.toArray("be", fieldByteLength)),
+        x: new Uint8Array(qxOut.value.toArray("be", fieldByteLength)),
         y: new Uint8Array(y.value.toArray("be", fieldByteLength)),
     }
 }

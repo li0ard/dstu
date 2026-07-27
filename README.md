@@ -20,7 +20,7 @@ npm i @li0ard/dstu
 
 ## Supported algorithms
 
-- Curves and DSA (DSTU 4145-2002, polynomial basis)
+- Curves and DSA (DSTU 4145-2002, polynomial and optimal normal basis)
 - Kalyna cipher (DSTU 7624:2014)
 - Kupyna hash function (DSTU 7564:2014)
     - Supports KMAC
@@ -35,3 +35,18 @@ npm i @li0ard/dstu
 - Galois Counter mode (GCM)
 - Message Authentication Code mode (MAC and GMAC)
 - Output Feedback mode (OFB)
+
+## Supported curves
+
+| Bits | Polynomial<br>(PB) | Optimal normal<br>(ONB) | Test curve |
+|:----:|:------------------:|:-----------------------:|:----------:|
+|  163 |         ✅         |                         |     ✅     |
+|  167 |         ✅         |                         |            |
+|  173 |         ✅         |           ✅            |  ✅ (ONB)  |
+|  179 |         ✅         |           ✅            |            |
+|  191 |         ✅         |           ✅            |            |
+|  233 |         ✅         |           ✅            |            |
+|  257 |         ✅         |                         |            |
+|  307 |         ✅         |                         |            |
+|  367 |         ✅         |                         |            |
+|  431 |         ✅         |           ✅            |            |

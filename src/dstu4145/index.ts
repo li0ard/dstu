@@ -1,9 +1,11 @@
 import { concatBytes, randomBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { 
     DSTU_163, DSTU_163_TEST, DSTU_167,
-    DSTU_173, DSTU_179, DSTU_191,
-    DSTU_233, DSTU_257, DSTU_307,
+    DSTU_173, DSTU_173_ONB, DSTU_173_ONB_TEST, DSTU_179, DSTU_179_ONB, DSTU_191,
+    DSTU_191_ONB,
+    DSTU_233, DSTU_233_ONB, DSTU_257, DSTU_307,
     DSTU_367, DSTU_431,
+    DSTU_431_ONB,
     type DSTUParameters
 } from "./const.js";
 import { binaryWeierstrass } from "./ec/index.js";
@@ -28,11 +30,18 @@ export const dstu4145 = (parameters: DSTUParameters) => {
             ? new BN(rand)
             : new BN(randomBytes(curve.lengths.scalarByteLength))
         ).maskn(k);
+        if(rand && e.isZero()) throw new Error("Invalid custom rand for presign (rand = 0)");
         if(e.isZero()) return computePresign(rand);
         const xR = curve.Point.BASE.mul(new curve.Field(e)).x;
         if(xR.is0()) return computePresign(rand);
 
         return { Fe: xR, e }
+    }
+
+    const prepareHash = (digest: TArg<Uint8Array>) => {
+        let h = curve.toInternalField(curve.hashToField(digest));
+        if (h.is0()) h = curve.Field.get1();
+        return h;
     }
 
     const sign = (
@@ -41,11 +50,10 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         rand?: TArg<Uint8Array>
     ): TRet<Uint8Array> => {
         const d = new BN(secretKey).mod(curve.ORDER.value);
-        let h = curve.hashToField(digest);
-        if(h.is0()) h = curve.Field.get1();
+        const h = prepareHash(digest);
 
         const { Fe, e } = computePresign(rand);
-        const r = h.mul(Fe).value.maskn(k);
+        const r = curve.toExternalField(h.mul(Fe)).value.maskn(k);
         if (r.isZero()) return sign(secretKey, digest, rand);
         const s = e.add(d.mul(r)).mod(curve.ORDER.value);
         if (s.isZero()) return sign(secretKey, digest, rand);
@@ -69,9 +77,9 @@ export const dstu4145 = (parameters: DSTUParameters) => {
             || _r.value.isZero() || _r.value.gte(curve.ORDER.value)
         ) return false;
 
-        const h = curve.hashToField(digest);
+        const h = prepareHash(digest);
         const R = curve.Point.BASE.mulWnaf(_s).add(Q.mulWnaf(_r));
-        const y = h.mul(R.x).value.maskn(k);
+        const y = curve.toExternalField(h.mul(R.x)).value.maskn(k);
 
         return y.eq(_r.value);
     }
@@ -88,18 +96,18 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         sign,
         verify,
         keygen,
-        lengths: curve.lengths,
-        Point: curve.Point
+        lengths: curve.lengths
     });
 }
 
 export * from "./const.js";
 export * from "./ec/expand.js";
 
+// ONB curves don't preinitialized because `multiplyOnb` is slow O(m^3) function
+// You need to initialize it manually via `dstu4145`
+
 /** DSTU 4145-2002 163 bit curve */
 export const dstu163 = dstu4145(DSTU_163);
-/** DSTU 4145-2002 163 bit curve (for testing) */
-export const dstu163Test = dstu4145(DSTU_163_TEST);
 /** DSTU 4145-2002 167 bit curve */
 export const dstu167 = dstu4145(DSTU_167);
 /** DSTU 4145-2002 173 bit curve */
