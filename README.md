@@ -20,7 +20,7 @@ npm i @li0ard/dstu
 
 ## Supported algorithms
 
-- Curves and DSA (DSTU 4145-2005, expiremental)
+- Curves and DSA (DSTU 4145-2002, polynomial basis)
 - Kalyna cipher (DSTU 7624:2014)
 - Kupyna hash function (DSTU 7564:2014)
     - Supports KMAC

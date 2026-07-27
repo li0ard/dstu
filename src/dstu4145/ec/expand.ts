@@ -1,5 +1,6 @@
 import BN from "bn.js";
 import type { DSTUShortParameters } from "../const.js";
+import { computeMod } from "./index.js";
 
 class Field {
     constructor(public value: BN = new BN(0)) {}
@@ -25,11 +26,7 @@ export const expandPoint = (
     const { m, ks, a } = params;
     const b = new Field(new BN(params.b, 16));
 
-    const modulo = Field.get0();
-    modulo.setBit(m, 1);
-    modulo.setBit(0, 1);
-    for (const i of ks) modulo.setBit(i, 1);
-
+    const modulo = new Field(computeMod(m, ks));
     const fieldByteLength = Math.ceil(m / 8);
 
     const mod = (f: Field): Field => {

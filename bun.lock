@@ -5,7 +5,6 @@
     "": {
       "name": "@li0ard/dstu",
       "dependencies": {
-        "@li0ard/sp80038": "^0.1.2",
         "@noble/hashes": "^2.2.0",
         "bn.js": "^5.2.3",
       },
@@ -26,10 +25,6 @@
     "@gerrit0/mini-shiki": ["@gerrit0/mini-shiki@3.23.0", "", { "dependencies": { "@shikijs/engine-oniguruma": "^3.23.0", "@shikijs/langs": "^3.23.0", "@shikijs/themes": "^3.23.0", "@shikijs/types": "^3.23.0", "@shikijs/vscode-textmate": "^10.0.2" } }, "sha512-bEMORlG0cqdjVyCEuU0cDQbORWX+kYCeo0kV1lbxF5bt4r7SID2l9bqsxJEM0zndaxpOUT7riCyIVEuqq/Ynxg=="],
 
     "@li0ard/gost": ["@li0ard/gost@0.2.0", "", { "dependencies": { "@noble/curves": "^2.2.0", "@noble/hashes": "^2.2.0" }, "peerDependencies": { "typescript": "^5" } }, "sha512-Vf5r8YIi775qwGzosdL83Ocx9bUycogUEMTuuVbjX1MgVaW8rHDbg5aRjDEvgfs/Fs182/pVwC/MjFP5lc/BlQ=="],
-
-    "@li0ard/sp80038": ["@li0ard/sp80038@0.1.2", "", { "dependencies": { "@noble/ciphers": "^2.2.0" }, "peerDependencies": { "typescript": "^5" } }, "sha512-av7qQUlmnbSYlL5ODAuF2JdyfqMDo9seWrZBLJ/Stjr8N2Aax+3uEgdhoRqloSA6aNxPZ+QRXPNtYn57yvs1Qg=="],
-
-    "@noble/ciphers": ["@noble/ciphers@2.2.0", "", {}, "sha512-Z6pjIZ/8IJcCGzb2S/0Px5J81yij85xASuk1teLNeg75bfT07MV3a/O2Mtn1I2se43k3lkVEcFaR10N4cgQcZA=="],
 
     "@noble/curves": ["@noble/curves@2.2.0", "", { "dependencies": { "@noble/hashes": "2.2.0" } }, "sha512-T/BoHgFXirb0ENSPBquzX0rcjXeM6Lo892a2jlYJkqk83LqZx0l1Of7DzlKJ6jkpvMrkHSnAcgb5JegL8SeIkQ=="],
 

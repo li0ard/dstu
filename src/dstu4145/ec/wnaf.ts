@@ -41,9 +41,9 @@ export const windowNaf = (width: number, k: BN): Int32Array => {
     const bigint = k.clone();
     const retLen = Math.floor(bigint.bitLength() / width) + 1;
     const wnaf = new Int32Array(retLen);
-    const pow2 = 1 << width;
-    const mask = pow2 - 1;
-    const sign = pow2 >>> 1;
+    const pow2 = 1 << width,
+        mask = pow2 - 1,
+        sign = pow2 >>> 1;
  
     let carry = false;
     let length = 0, pos = 0;

@@ -2,8 +2,7 @@ import { bytesToHex, type CHash } from "@noble/hashes/utils.js";
 import { AsnConvert, AsnIntegerArrayBufferConverter, AsnProp, AsnPropTypes, AsnType, AsnTypeTypes, OctetString } from "@peculiar/asn1-schema";
 import { Certificate } from "@peculiar/asn1-x509";
 import { describe, test, expect } from "bun:test";
-import { dstu4145 } from ".";
-import { expandPoint } from "./ec/expand";
+import { dstu4145, expandPoint } from ".";
 import { gost3431195 } from "@li0ard/gost/gost341194.js";
 import { kupyna256, kupyna384, kupyna512 } from "../kupyna";
 

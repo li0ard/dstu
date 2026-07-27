@@ -41,7 +41,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@li0ard/sp80038": "^0.1.2",
     "@noble/hashes": "^2.2.0",
     "bn.js": "^5.2.3"
   },

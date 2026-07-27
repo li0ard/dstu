@@ -113,7 +113,7 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
     const b = Field.fromString(parameters.b);
 
     // Compute modulo from `m` and `ks` coefficients
-    const modulo: Readonly<Field> = new Field(computeMod(parameters.m, parameters.ks));
+    const modulo = new Field(computeMod(parameters.m, parameters.ks));
 
     // Compute values length
     const fieldByteLength = Math.ceil(parameters.m / 8),
