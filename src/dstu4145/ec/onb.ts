@@ -1,7 +1,7 @@
 import BN from "bn.js";
-import type { DSTUParameters, DSTUShortParameters } from "../const.js";
-import { computeMod } from "./index.js";
+import type { DSTUShortParameters } from "../const.js";
 import { hexToBytes } from "@noble/hashes/utils.js";
+import { createField } from "./math.js";
 
 const decompress_matrix = (compress_mulp: BN, mulp: Uint16Array) => {
     const bitLen = compress_mulp.bitLength();
@@ -17,8 +17,7 @@ const decompress_matrix = (compress_mulp: BN, mulp: Uint16Array) => {
 
 export const init_onb_parameters = (curve: DSTUShortParameters) => {
     if(!curve.onb) throw new Error("Invalid curve: Curve doesn't support ONB");
-    const { m, ks } = curve;
-    const modulo = computeMod(m, ks);
+    const { m } = curve;
 
     const mulp = new Uint16Array(2 * m - 1);
     const compress_mulp = new BN(hexToBytes(curve.onb.matrix), "le");
@@ -55,34 +54,9 @@ export const init_onb_parameters = (curve: DSTUShortParameters) => {
         return r;
     }
 
-    const mod = (f: BN): BN => {
-        const cmp = f.cmp(modulo);
-        if (cmp === 0) return new BN(0);
-        if (cmp < 0) return f.clone();
-
-        let bag = f;
-        const vl = modulo.bitLength();
-        while (true) {
-            bag = bag.xor(modulo.ushln(bag.bitLength() - vl));
-            if (bag.bitLength() < vl) return bag;
-        }
-    }
-
-    const mul = (x: BN, v: BN): BN => {
-        let bag = new BN(0);
-        let shift = x;
-        const vLen = v.bitLength();
-
-        for (let i = 0; i < vLen; i++) {
-            if (v.testn(i)) bag = bag.xor(shift);
-            shift = shift.ushln(1);
-        }
-
-        return mod(bag);
-    }
-
     const toPb: BN[] = new Array(m);
     toPb[0] = root1.clone();
+    const { mul } = createField(m, curve.ks);
     for (let i = 1; i < m; i++) toPb[i] = mul(toPb[i - 1], toPb[i - 1]);
 
     const _toOnb: BN[] = new Array(m);

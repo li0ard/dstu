@@ -3,188 +3,76 @@ import type { DSTUParameters } from "../const.js";
 import BN from "bn.js";
 import { bitLength, getWindowSize, windowNaf } from "./wnaf.js";
 import { init_onb_parameters } from "./onb.js";
-
-export const computeMod = (m: number, ks: number[]): BN => {
-    const modulo = new BN(0);
-    modulo.setn(m, 1);
-    modulo.setn(0, 1);
-    for (const i of ks) modulo.setn(i, 1);
-
-    return modulo;
-}
+import { createField } from "./math.js";
 
 export const binaryWeierstrass = (parameters: DSTUParameters) => {
-    // GF(2^m) operations
-    class Field {
-        constructor(public value: BN = new BN(0)) {}
-
-        compare(v: Field): number { return this.value.cmp(v.value); }
-
-        clone(): Field { return new Field(this.value.clone()); }
-
-        getLength(): number { return this.value.bitLength(); }
-
-        testBit(i: number): 0 | 1 { return this.value.testn(i) ? 1 : 0; }
-
-        setBit(i: number, v: number) { this.value = this.value.setn(i, v == 1); }
-
-        add(v: Field): Field { return new Field(this.value.xor(v.value)); }
-
-        is0(): boolean { return this.value.isZero(); }
-
-        shiftLeft(n: number): Field {
-            if (n < 0) throw new Error("Shift amount cannot be negative.");
-            return new Field(this.value.ushln(n));
-        }
-
-        mod(): Field {
-            const cmp = this.compare(modulo);
-            if (cmp === 0) return Field.get0();
-            if (cmp < 0) return this.clone();
-            
-            let bag: Field = this;
-            const vl = modulo.getLength();
-            while (true) {
-                bag = bag.add(modulo.shiftLeft(bag.getLength() - vl));
-                if (bag.getLength() < vl) return bag;
-            }
-        }
-
-        mul(v: Field): Field {
-            let bag = Field.get0();
-            let shift: Field = this;
-            const vLen = v.getLength();
-
-            for (let i = 0; i < vLen; i++) {
-                if (v.testBit(i) == 1) bag = bag.add(shift);
-                shift = shift.shiftLeft(1);
-            }
-            return bag.mod();
-        }
-
-        trace(): 0 | 1 {
-            let t: Field = this;
-            for (let i = 1; i < parameters.m; i++) t = t.mul(t).add(this);
-            return t.testBit(0);
-        }
-
-        traceOnb (): 0 | 1 {
-            let t = 0;
-            for (let i = 0; i < parameters.m; i++) t ^= this.testBit(i);
-            return t as 0 | 1;
-        }
-
-        invert(): Field {
-            let r = this.mod(), s = modulo;
-            let u = Field.get1(), v = Field.get0();
-
-            while (r.getLength() > 1) {
-                let j = s.getLength() - r.getLength();
-                if (j < 0) {
-                    [r, s] = [s, r];
-                    [u, v] = [v, u];
-                    j = -j;
-                }
-                s = s.add(r.shiftLeft(j));
-                v = v.add(u.shiftLeft(j));
-            }
-            return u;
-        }
-
-        fsquad(): Field {
-            const range_to = Math.floor((parameters.m - 1) / 2);
-            const val_a = this.mod();
-
-            let val_z = val_a.clone();
-            for (let idx = 1; idx <= range_to; idx++) {
-                val_z = val_z.mul(val_z);
-                val_z = val_z.mul(val_z).add(val_a);
-            }
-
-            const val_w = val_z.mul(val_z).add(val_z);
-            if (val_w.compare(val_a) == 0) return val_z.mod();
-            throw new Error("squad eq fail: no square root exists");
-        }
-
-        toBytes(length?: number): TRet<Uint8Array> { return new Uint8Array(this.value.toArray("be", length)); }
-
-        static fromString(str: string): Field { return new Field(new BN(str, 16)); }
-        static fromBytes(v: Uint8Array) { return new Field(new BN(v, 16)); }
-
-        static get0(): Field { return new Field(new BN(0)); }
-        static get1(): Field { return new Field(new BN(1)); }
-    }
+    const field = createField(parameters.m, parameters.ks);
 
     const onb = parameters.onb ? init_onb_parameters(parameters) : undefined;
-    // Convert ONB to PB (if needed)
-    const toInternal = (f: Field): Field => onb ? new Field(onb.onbToPb(f.value)) : f.clone();
-    // Convert PB to ONB (if needed)
-    const toExternal = (f: Field): Field => onb ? new Field(onb.pbToOnb(f.value)) : f.clone();
+    const toInternal = (f: BN): BN => onb ? onb.onbToPb(f) : f.clone();
+    const toExternal = (f: BN): BN => onb ? onb.pbToOnb(f) : f.clone();
 
-    // Convert `n` and `b` to `Field`
-    const order = Field.fromString(parameters.order);
-    const b = toInternal(Field.fromString(parameters.b));
+    const order = field.fromHexStringOrBytes(parameters.order);
+    const b = toInternal(field.fromHexStringOrBytes(parameters.b));
 
-    // Compute modulo from `m` and `ks` coefficients
-    const modulo = new Field(computeMod(parameters.m, parameters.ks));
-
-    // Compute values length
-    const fieldByteLength = Math.ceil(parameters.m / 8),
-        scalarByteLength = Math.ceil(order.getLength() / 8),
-        pointByteLength = fieldByteLength * 2,
-        signatureByteLength = scalarByteLength * 2;
-    const lengths = Object.freeze({ fieldByteLength, pointByteLength, scalarByteLength, signatureByteLength });
+    const scalarByteLength = Math.ceil(order.bitLength() / 8),
+        pointByteLength = field.LENGTH * 2
+    const lengths = Object.freeze({
+        fieldByteLength: field.LENGTH,
+        pointByteLength,
+        scalarByteLength,
+        signatureByteLength: scalarByteLength * 2
+    });
 
     // Point operations
     class Point {
         static BASE = new Point(
-            toInternal(Field.fromString(parameters.Gx)),
-            toInternal(Field.fromString(parameters.Gy))
+            toInternal(field.fromHexStringOrBytes(parameters.Gx)),
+            toInternal(field.fromHexStringOrBytes(parameters.Gy))
         );
-        static ZERO = new Point(Field.get0(), Field.get0());
+        static ZERO = new Point(new BN(0), new BN(0));
  
         _precomp?: { pos: Point[]; neg: Point[] };
         _double?: Point;
-        constructor(public x: Field, public y: Field) {}
+        constructor(public x: BN, public y: BN) {}
 
         add(p: Point): Point {
             const pz = Point.ZERO.clone();
             const x0 = this.x.clone(), y0 = this.y.clone();
             const x1 = p.x.clone(), y1 = p.y.clone();
 
-            if (this.iszero()) return p;
-            if (p.iszero()) return this;
+            if (this.isZero()) return p;
+            if (p.isZero()) return this;
 
-            let lbd: Field, x2: Field;
-            if (x0.compare(x1) !== 0) {
-                const tmp = y0.add(y1), tmp2 = x0.add(x1);
-                lbd = tmp.mul(tmp2.invert());
+            let lbd: BN, x2: BN;
+            if (x0.cmp(x1) !== 0) {
+                const tmp = y0.xor(y1), tmp2 = x0.xor(x1);
+                lbd = field.mul(tmp, field.invert(tmp2));
 
-                x2 = lbd.mul(lbd);
-                if (parameters.a === 1) x2.setBit(0, 1 ^ x2.testBit(0));
-                x2 = x2.add(lbd).add(x0).add(x1);
+                x2 = field.sqr(lbd);
+                if (parameters.a === 1) x2 = field.setBit(x2, 0, 1 ^ field.testBit(x2, 0));
+                x2 = x2.xor(lbd).xor(x0).xor(x1);
             } else {
-                if (y1.compare(y0) !== 0) return pz;
-                if (x1.compare(Field.get0()) === 0) return pz;
-                lbd = x1.add(p.y.mul(p.x.invert()));
-                x2 = lbd.mul(lbd);
-                if (parameters.a === 1) x2.setBit(0, 1 ^ x2.testBit(0));
-                x2 = x2.add(lbd);
+                if (y1.cmp(y0) !== 0) return pz;
+                if (x1.isZero()) return pz;
+                lbd = x1.xor(field.mul(p.y, field.invert(p.x)));
+                x2 = field.sqr(lbd);
+                if (parameters.a === 1) x2 = field.setBit(x2, 0, 1 ^ field.testBit(x2, 0));
+                x2 = x2.xor(lbd);
             }
 
-            const y2 = lbd.mul(x1.add(x2)).add(x2).add(y1);
-
+            const y2 = field.mul(lbd, x1.xor(x2)).xor(x2).xor(y1);
             pz.x = x2;
             pz.y = y2;
+
             return pz;
         }
 
-        mul(f: Field): Point {
-            let pz = Point.ZERO.clone();
-            let p = this.clone();
+        mul(f: BN): Point {
+            let pz = Point.ZERO.clone(), p = this.clone();
 
-            for (let j = f.getLength() - 1; j >= 0; j--) {
-                if (f.testBit(j) === 1) {
+            for (let j = f.bitLength() - 1; j >= 0; j--) {
+                if (f.testn(j)) {
                     pz = pz.add(p);
                     p = p.add(p);
                 } else {
@@ -195,28 +83,24 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return pz;
         }
 
-        negate(): Point { return new Point(this.x, this.x.add(this.y)); }
+        negate(): Point { return new Point(this.x, this.x.xor(this.y)); }
 
         clone(): Point { return new Point(this.x, this.y); }
 
-        iszero(): boolean { return this.x.is0() && this.y.is0(); }
+        isZero(): boolean { return this.x.isZero() && this.y.isZero(); }
 
-        compress(): Field {
-            const x_inv = this.x.invert();
-            const tmp = x_inv.mul(this.y);
-            const trace = tmp.trace();
+        compress(): BN {
+            const tmp = field.mul(field.invert(this.x), this.y);
 
-            const xExt = toExternal(this.x);
-            xExt.setBit(0, trace);
-            return xExt;
+            return field.setBit(toExternal(this.x), 0, field.trace(tmp));
         }
 
         toBytes(isCompressed = false): TRet<Uint8Array> {
-            if(isCompressed) return this.compress().toBytes(fieldByteLength);
+            if(isCompressed) return field.toBytes(this.compress(), field.LENGTH);
 
             return concatBytes(
-                toExternal(this.x).toBytes(fieldByteLength),
-                toExternal(this.y).toBytes(fieldByteLength),
+                field.toBytes(toExternal(this.x), field.LENGTH),
+                field.toBytes(toExternal(this.y), field.LENGTH),
             );
         }
 
@@ -246,12 +130,12 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return { pos, neg };
         }
 
-        mulWnaf(f: Field): Point {
-            let width = getWindowSize(f.value.bitLength());
+        mulWnaf(f: BN): Point {
+            let width = getWindowSize(f.bitLength());
             width = Math.max(2, Math.min(16, width));
  
             const { pos, neg } = this.precomp(width);
-            const wnaf = windowNaf(width, f.value);
+            const wnaf = windowNaf(width, f);
  
             let R: Point = Point.ZERO;
             let i = wnaf.length;
@@ -291,63 +175,55 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return R;
         }
 
-        static expand(xExt: Field): Point {
-            const bit = xExt.testBit(0);
-            const xCleanExt = xExt.clone();
-            xCleanExt.setBit(0, 0);
+        static expand(xExt: BN): Point {
+            const bit = field.testBit(xExt, 0);
+            let xCleanExt = xExt.clone();
+            xCleanExt = field.setBit(xCleanExt, 0, 0);
 
             const a = parameters.a ?? 0;
-            const traceX = onb ? xCleanExt.traceOnb() : xCleanExt.trace();
-            if ((traceX === 1 && a === 0) || (traceX === 0 && a === 1)) xCleanExt.setBit(0, 1);
+            const traceX = onb ? field.traceOnb(xCleanExt) : field.trace(xCleanExt);
+            if ((traceX === 1 && a === 0) || (traceX === 0 && a === 1)) xCleanExt = field.setBit(xCleanExt, 0, 1);
 
             const xClean = toInternal(xCleanExt);
+            const x2 = field.sqr(xClean);
+            let rhs = field.mul(x2, xClean);
+            if (a === 1) rhs = rhs.xor(x2);
+            if (b) rhs = rhs.xor(b);
 
-            const x2 = xClean.mul(xClean);
-            let rhs = x2.mul(xClean);
-            if (a === 1) rhs = rhs.add(x2);
-            if (b) rhs = rhs.add(b);
-
-            const x2inv = x2.invert();
-            const c = rhs.mul(x2inv);
-            const z = c.fsquad();
-
-            const traceZ = z.trace();
+            let z = field.sqrt(field.mul(rhs, field.invert(x2)));
+            const traceZ = field.trace(z);
             if ((traceZ === 0 && bit === 1) || (traceZ === 1 && bit === 0)) {
-                const currentBit = z.testBit(0);
-                z.setBit(0, 1 ^ currentBit);
+                const currentBit = field.testBit(z, 0);
+                z = field.setBit(z, 0, 1 ^ currentBit);
             }
 
-            return new Point(xClean, z.mul(xClean));
+            return new Point(xClean, field.mul(z, xClean));
         }
 
         static fromBytes(bytes: TArg<Uint8Array>): Point {
             if(bytes.length == pointByteLength) return new Point(
-                toInternal(Field.fromBytes(bytes.subarray(0, fieldByteLength))),
-                toInternal(Field.fromBytes(bytes.subarray(fieldByteLength)))
+                toInternal(field.fromHexStringOrBytes(bytes.subarray(0, field.LENGTH))),
+                toInternal(field.fromHexStringOrBytes(bytes.subarray(field.LENGTH)))
             );
-            else if(bytes.length == fieldByteLength)
-                return Point.expand(Field.fromBytes(bytes));
+            else if(bytes.length == field.LENGTH)
+                return Point.expand(field.fromHexStringOrBytes(bytes));
             else
-                throw new Error(`Invalid bytes length. Must be ${pointByteLength} for uncompressed and ${fieldByteLength} for compressed`);
+                throw new Error(`Invalid bytes length. Must be ${pointByteLength} for uncompressed and ${field.LENGTH} for compressed`);
         }
     }
 
-    // Utils
-    const hashToField = (hash: TArg<Uint8Array>): Field => {
-        const bn = new BN(hash);
-        const k = Math.min(parameters.m, bn.bitLength());
-        return new Field(bn.maskn(k));
-    }
+    const k = order.bitLength() - 1
+    const truncate = (x: BN) => x.maskn(k);
 
-    // precompute
-    Point.BASE.mulWnaf(new Field(new BN(3)));
+    // Precompute
+    Point.BASE.mulWnaf(new BN(3));
 
     return Object.freeze({
-        Field, Point,
-        ORDER: order, MODULO: modulo,
+        Field: field, Point,
+        ORDER: order,
         parameters, lengths,
-        hashToField,
         isOnb: !!onb,
+        truncate, 
         toInternalField: toInternal,
         toExternalField: toExternal
     });
