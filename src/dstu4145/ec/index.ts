@@ -190,12 +190,9 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             if (a === 1) rhs = rhs.xor(x2);
             if (b) rhs = rhs.xor(b);
 
-            let z = field.sqrt(field.mul(rhs, field.invert(x2)));
+            let z = field.solve_quad(field.mul(rhs, field.invert(x2)));
             const traceZ = field.trace(z);
-            if ((traceZ === 0 && bit === 1) || (traceZ === 1 && bit === 0)) {
-                const currentBit = field.testBit(z, 0);
-                z = field.setBit(z, 0, 1 ^ currentBit);
-            }
+            if ((traceZ === 0 && bit === 1) || (traceZ === 1 && bit === 0)) z = field.setBit(z, 0, 1 ^ field.testBit(z, 0));
 
             return new Point(xClean, field.mul(z, xClean));
         }
@@ -212,7 +209,7 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
         }
     }
 
-    const k = order.bitLength() - 1
+    const k = order.bitLength() - 1;
     const truncate = (x: BN) => x.maskn(k);
 
     // Precompute

@@ -36,7 +36,7 @@ export const expandPoint = (
 
     const x2inv = field.invert(x2);
     const c = field.mul(rhs, x2inv);
-    let z = field.sqrt(c);
+    let z = field.solve_quad(c);
 
     const traceZ = field.trace(z);
     if ((traceZ === 0 && bit === 1) || (traceZ === 1 && bit === 0)) {

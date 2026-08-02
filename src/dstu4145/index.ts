@@ -34,7 +34,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
     }
 
     const prepareHash = (digest: TArg<Uint8Array>) => {
-        let h = curve.toInternalField(curve.Field.hashToField(digest));
+        let h = curve.toInternalField(Field.hashToField(digest));
         if (h.isZero()) h = new BN(1);
         return h;
     }
@@ -50,7 +50,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         const { Fe, e } = computePresign(rand);
         const r = truncate(curve.toExternalField(Field.mul(h, Fe)))
         if (r.isZero()) return sign(secretKey, digest, rand);
-        const s = e.add(d.mul(r)).mod(curve.ORDER); // BN
+        const s = e.add(d.mul(r)).mod(curve.ORDER);
         if (s.isZero()) return sign(secretKey, digest, rand);
 
         return concatBytes(
@@ -71,7 +71,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         if (_s.isZero() || _s.gte(curve.ORDER) || _r.isZero() || _r.gte(curve.ORDER))
             return false;
 
-        const h = prepareHash(digest); // Field
+        const h = prepareHash(digest);
         const R = Point.BASE.mulWnaf(_s).add(Q.mulWnaf(_r));
         const y = truncate(curve.toExternalField(Field.mul(h, R.x)));
 
