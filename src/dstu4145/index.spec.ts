@@ -22,11 +22,13 @@ const performTest = (
 }
 
 
+const dstu163_test = dstu4145(DSTU_163_TEST);
+const dstu173_onb_test = dstu4145(DSTU_173_ONB_TEST);
+
 describe("[CORE] DSTU 4145-2002 (PB)", () => {
     const digest = hexToBytes("09C9C44277910C9AAEE486883A2EB95B7180166DDF73532EEB76EDAEF52247FF");
 
     test("#1 (m=163)", () => {
-        const dstu163_test = dstu4145(DSTU_163_TEST);
         const privateKey = hexToBytes("0183F60FDF7951FF47D67193F8D073790C1C9B5A3E");
         const rand = hexToBytes("01025E40BD97DB012B7A1D79DE8E12932D247F61C6");
         const expectedPk = hexToBytes("057DE7FDE023FF929CB6AC785CE4B79CF64ABDC2DA03E85444324BCF06AD85ABF6AD7B5F34770532B9AA");
@@ -54,7 +56,6 @@ describe("[CORE] DSTU 4145-2002 (PB)", () => {
     }, 10000);
 });
 
-const dstu173_onb_test = dstu4145(DSTU_173_ONB_TEST);
 describe("[CORE] DSTU 4145-2002 (ONB)", () => {
     const digest = hexToBytes("2A681ECE118389B27A108137187EA862117EF1484289470ECAC802C5A651FDA8");
 

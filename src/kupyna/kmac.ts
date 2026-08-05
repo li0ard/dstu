@@ -29,7 +29,7 @@ abstract class KupynaKMAC<T, H extends Hash<H>> implements Hash<KupynaKMAC<T,H>>
     readonly blockLen: number;
     readonly canXOF = false;
     protected readonly threshold: bigint;
-    protected h: H
+    protected h: H;
     protected ik: Uint8Array;
     protected len: bigint;
 
@@ -52,7 +52,7 @@ abstract class KupynaKMAC<T, H extends Hash<H>> implements Hash<KupynaKMAC<T,H>>
     update(data: TArg<Uint8Array>): this {
         this.len += BigInt(data.length);
         this.h.update(data);
-        return this
+        return this;
     }
 
     digest(): TRet<Uint8Array> {

@@ -1,12 +1,14 @@
-import { bytesToHex, type CHash } from "@noble/hashes/utils.js";
+import { bytesToHex, type Hash, type TArg } from "@noble/hashes/utils.js";
 import { AsnConvert, AsnIntegerArrayBufferConverter, AsnProp, AsnPropTypes, AsnType, AsnTypeTypes, OctetString } from "@peculiar/asn1-schema";
 import { Certificate } from "@peculiar/asn1-x509";
 import { describe, test, expect } from "bun:test";
 import { dstu4145, expandPoint } from ".";
-import { gost3431195 } from "@li0ard/gost/gost341194.js";
-import { kupyna256, kupyna384, kupyna512 } from "../kupyna";
+import { Gost341194 } from "@li0ard/gost/gost341194.js";
+import { Kupyna256, Kupyna384, Kupyna512 } from "../kupyna";
+import { magmaSboxes } from "@li0ard/gost/magma.js";
 
 // ASN.1 schemes from https://zakon.rada.gov.ua/laws/show/z1398-12#Text
+/** Coefficients for pentanomial polynomial */
 export class Pentanomial {
     @AsnProp({ type: AsnPropTypes.Integer })
     k!: number;
@@ -22,12 +24,22 @@ export class Pentanomial {
     }
 }
 
+/** Coefficients for curve polynomial */
 @AsnType({ type: AsnTypeTypes.Choice })
 export class BinaryFieldPolynomial {
-
+    /**
+     * Coefficients for trinomial polynomial
+     * 
+     * `x^m + x^k + 1`
+     */
     @AsnProp({ type: AsnPropTypes.Integer })
     trinomial?: number;
 
+    /** 
+     * Coefficients for pentanomial polynomial
+     * 
+     * `x^m + x^k + x^j + x^l + 1`
+     */
     @AsnProp({ type: Pentanomial })
     pentanomial?: Pentanomial;
 
@@ -36,6 +48,7 @@ export class BinaryFieldPolynomial {
     }
 }
 
+/** Binary field characteristics */
 export class BinaryField {
     @AsnProp({ type: AsnPropTypes.Integer })
     m!: number;
@@ -48,19 +61,25 @@ export class BinaryField {
     }
 }
 
+/** Binary curve parameters */
 export class ECBinary {
+    /** Field parameters */
     @AsnProp({ type: BinaryField })
     f!: BinaryField;
 
+    /** Parameter `a` */
     @AsnProp({ type: AsnPropTypes.Integer })
     a!: 0 | 1;
 
+    /** Parameter `b` */
     @AsnProp({ type: AsnPropTypes.OctetString })
     b!: ArrayBuffer;
 
+    /** Curve order */
     @AsnProp({ type: AsnPropTypes.Integer, converter: AsnIntegerArrayBufferConverter })
     n!: ArrayBuffer;
 
+    /** Compressed base point */
     @AsnProp({ type: AsnPropTypes.OctetString })
     bp!: ArrayBuffer;
 
@@ -69,11 +88,14 @@ export class ECBinary {
     }
 }
 
+/** DSTU 4145-2002 curve definition */
 @AsnType({ type: AsnTypeTypes.Choice })
 export class DSTU4145ParamsCurve {
+    /** Explicit definition */
     @AsnProp({ type: ECBinary })
     ecbinary?: ECBinary;
 
+    /** OID of predefined curve */
     @AsnProp({ type: AsnPropTypes.ObjectIdentifier })
     namedCurve?: string
 
@@ -82,10 +104,13 @@ export class DSTU4145ParamsCurve {
     }
 }
 
+/** DSTU 4145-2002 signature parameters */
 export class DSTU4145Params {
+    /** Curve definition */
     @AsnProp({ type: DSTU4145ParamsCurve })
     curve!: DSTU4145ParamsCurve;
 
+    /** S-Box (DKE) for DSTU GOST 28147-89 */
     @AsnProp({ type: AsnPropTypes.OctetString, optional: true })
     dke?: ArrayBuffer;
 
@@ -117,6 +142,10 @@ const createSignerFromParameters = (params: ECBinary) => {
     });
 }
 
+const convertOctetStringToBytes = (octet: TArg<ArrayBuffer> | TArg<Uint8Array>) => new Uint8Array(
+    AsnConvert.parse(octet, OctetString).buffer
+);
+
 const proceedCertificate = (certificate: Uint8Array) => {
     const parsed = AsnConvert.parse(certificate, Certificate);
     
@@ -124,29 +153,28 @@ const proceedCertificate = (certificate: Uint8Array) => {
     const parameters = AsnConvert.parse(spki.algorithm.parameters!, DSTU4145Params);
     if(!parameters.curve.ecbinary) throw new Error("Missing curve definition");
     const signer = createSignerFromParameters(parameters.curve.ecbinary);
+    const spk = convertOctetStringToBytes(spki.subjectPublicKey).reverse();
 
-    const spk = new Uint8Array(AsnConvert.parse(spki.subjectPublicKey, OctetString).buffer).reverse();
-
-    let hash: CHash;
+    let hash: Hash<any>;
     switch(parsed.signatureAlgorithm.algorithm) {
         case "1.2.804.2.1.1.1.1.3.1.1":
-            hash = gost3431195;
+            hash = new Gost341194(parameters.dke ? new Uint8Array(parameters.dke) : magmaSboxes.DSSZZI_UA_DKE_1);
         break;
         case "1.2.804.2.1.1.1.1.3.6.1.1":
-            hash = kupyna256;
+            hash = new Kupyna256();
         break;
         case "1.2.804.2.1.1.1.1.3.6.2.1":
-            hash = kupyna384;
+            hash = new Kupyna384();
         break;
         case "1.2.804.2.1.1.1.1.3.6.3.1":
-            hash = kupyna512;
+            hash = new Kupyna512();
         break;
         default:
-            hash = gost3431195;
+            hash = new Gost341194(parameters.dke ? new Uint8Array(parameters.dke) : magmaSboxes.DSSZZI_UA_DKE_1);
     }
 
-    const digest = hash(new Uint8Array(parsed.tbsCertificateRaw!)).reverse();
-    const signature = new Uint8Array(AsnConvert.parse(parsed.signatureValue, OctetString).buffer).reverse();
+    const digest = hash.update(new Uint8Array(parsed.tbsCertificateRaw!)).digest().reverse();
+    const signature = convertOctetStringToBytes(parsed.signatureValue).reverse();
 
     expect(signer.verify(spk, digest, signature)).toBeTrue();
 }
@@ -216,6 +244,33 @@ BgNVHS4EPDA6MDigNqA0hjJodHRwOi8vY3pvLmdvdi51YS9kb3dubG9hZC9jcmxzL0NaTy0yMDI2LURl
 bHRhLmNybDAOBgwqhiQCAQEBAQMGAQEDbwAEbIq7vg3ge0oqtJuuKzlOYUT+4bt2TbY+DrGknxdEfREU
 XALU/e7yOvDvv6nuDZILtMmRs5Q1CUqPaaYnwWlYizp+MRG4jDi9GCyHPjO5xcIXX+c9uyAxLB/9oLD1
 5sDbIlnGHTxiy54Btr0/Pg==
+        `;
+
+        proceedCertificate(Uint8Array.fromBase64(certificate));
+    }, 10000);
+
+    test("#3 (m=431, gost3431195 custom dke)", () => {
+        // Центральний засвідчувальний орган (S/N 1)
+        // https://czo.gov.ua/download/cacertificates/1.cer
+        const certificate = `
+MIIEKzCCA6egAwIBAgIBATANBgsqhiQCAQEBAQMBATCBzDFJMEcGA1UECwxA0KbQtdC90YLRgNCw0LvR
+jNC90LjQuSDQt9Cw0YHQstGW0LTRh9GD0LLQsNC70YzQvdC40Lkg0L7RgNCz0LDQvTE1MDMGA1UEAwws
+0KPQutGA0LDRl9C90LAsINCm0JfQniAvIFVrcmFpbmUsIENlbnRyYWwgQ0ExCzAJBgNVBAYTAlVBMREw
+DwYDVQQHDAjQmtC40ZfQsjEoMCYGA1UECAwf0JrQuNGX0LLRgdGM0LrQsCDQvtCx0LvQsNGB0YLRjDAe
+Fw0wNTEyMjMyMzAxMDFaFw0xMDEyMjMyMzAxMDFaMIHMMUkwRwYDVQQLDEDQptC10L3RgtGA0LDQu9GM
+0L3QuNC5INC30LDRgdCy0ZbQtNGH0YPQstCw0LvRjNC90LjQuSDQvtGA0LPQsNC9MTUwMwYDVQQDDCzQ
+o9C60YDQsNGX0L3QsCwg0KbQl9CeIC8gVWtyYWluZSwgQ2VudHJhbCBDQTELMAkGA1UEBhMCVUExETAP
+BgNVBAcMCNCa0LjRl9CyMSgwJgYDVQQIDB/QmtC40ZfQstGB0YzQutCwINC+0LHQu9Cw0YHRgtGMMIIB
+UTCCARIGCyqGJAIBAQEBAwEBMIIBATCBvDAPAgIBrzAJAgEBAgEDAgEFAgEBBDbzykDGaaTaFzFJyhLD
+La4Ya1Osa8Y2WZferq6K0tiI+b/VNAFpTvnEJz2M/m3Cj3BqD0kQzgMCNj//////////////////////
+/////////////7oxdUWACajApyTwL4Gqih/Lr4DZDHqVEQUEzwQ2lqAgR9+skUI33jGNgj2Qsh9+3x7s
+o5koelwr4fy89k/x5eqNSvFZ/1fPHfXz+iz7PmFIhr15BECLwhftNllK8B904j3LmmBY/teFIBSrw2lL
+CKc1nWIez+h/01q0GSxgeuwU0oOw9WmwlkGuj13DJ8cSmm70jTULAzkABDa6vb3UVIxZr2cXcVSvKkPM
+65Ii2+8biqyoH8i9e0NKJu+IhjDvUrvzlr8U+ywuf5bpSj4NfEmjezB5MA4GA1UdDwEB/wQEAwIBxjAP
+BgNVHRMBAf8EBTADAQH/MCsGA1UdIwQkMCKAIOPEn/xcXE6VGFNB8vbfXS1XMYYzAa4ML8opsOslTHJN
+MCkGA1UdDgQiBCDjxJ/8XFxOlRhTQfL2310tVzGGMwGuDC/KKbDrJUxyTTANBgsqhiQCAQEBAQMBAQNv
+AARsh0unjBfQoINx2rXAJggrBdoRsCouw8lN771DhcuUrlQUuEEQHTaZrQoYbECuAGfsxfTyldQDEOVz
+D/Uq8Xh4gIHuSqki9mRSjMR19MQtTKRmI9TRHIeTdIZ6l3P7jFfGJvTP0E9NYSolx+kM
         `;
 
         proceedCertificate(Uint8Array.fromBase64(certificate));

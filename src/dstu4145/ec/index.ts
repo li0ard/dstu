@@ -41,23 +41,23 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             const x0 = this.x.clone(), y0 = this.y.clone();
             const x1 = p.x.clone(), y1 = p.y.clone();
 
-            if (this.isZero()) return p;
-            if (p.isZero()) return this;
+            if(this.isZero()) return p;
+            if(p.isZero()) return this;
 
             let lbd: BN, x2: BN;
-            if (x0.cmp(x1) !== 0) {
+            if(x0.cmp(x1) !== 0) {
                 const tmp = y0.xor(y1), tmp2 = x0.xor(x1);
                 lbd = field.mul(tmp, field.invert(tmp2));
 
                 x2 = field.sqr(lbd);
-                if (parameters.a === 1) x2 = field.setBit(x2, 0, 1 ^ field.testBit(x2, 0));
+                if(parameters.a === 1) x2 = field.setBit(x2, 0, 1 ^ field.testBit(x2, 0));
                 x2 = x2.xor(lbd).xor(x0).xor(x1);
             } else {
-                if (y1.cmp(y0) !== 0) return pz;
-                if (x1.isZero()) return pz;
+                if(y1.cmp(y0) !== 0) return pz;
+                if(x1.isZero()) return pz;
                 lbd = x1.xor(field.mul(p.y, field.invert(p.x)));
                 x2 = field.sqr(lbd);
-                if (parameters.a === 1) x2 = field.setBit(x2, 0, 1 ^ field.testBit(x2, 0));
+                if(parameters.a === 1) x2 = field.setBit(x2, 0, 1 ^ field.testBit(x2, 0));
                 x2 = x2.xor(lbd);
             }
 
@@ -71,8 +71,8 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
         mul(f: BN): Point {
             let pz = Point.ZERO.clone(), p = this.clone();
 
-            for (let j = f.bitLength() - 1; j >= 0; j--) {
-                if (f.testn(j)) {
+            for(let j = f.bitLength() - 1; j >= 0; j--) {
+                if(f.testn(j)) {
                     pz = pz.add(p);
                     p = p.add(p);
                 } else {
@@ -108,21 +108,21 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
  
         timesPow2(e: number): Point {
             let r: Point = this;
-            for (let i = 0; i < e; i++) r = r.double();
+            for(let i = 0; i < e; i++) r = r.double();
             return r;
         }
 
         precomp(width: number): { pos: Point[]; neg: Point[] } {
-            if (!this._precomp) this._precomp = { pos: [this], neg: [] };
+            if(!this._precomp) this._precomp = { pos: [this], neg: [] };
 
             const pos = this._precomp.pos, neg = this._precomp.neg;
-            if (!neg[0]) neg[0] = pos[0].negate();
+            if(!neg[0]) neg[0] = pos[0].negate();
  
             const len = 1 << Math.max(0, width - 2);
-            if (len === 1) return { pos, neg };
+            if(len === 1) return { pos, neg };
  
             const twice = this._double ?? (this._double = this.double());
-            for (let i = pos.length; i < len; i++) {
+            for(let i = pos.length; i < len; i++) {
                 pos[i] = twice.add(pos[i - 1]);
                 neg[i] = pos[i].negate();
             }
@@ -139,15 +139,14 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
  
             let R: Point = Point.ZERO;
             let i = wnaf.length;
-            if (i > 1) {
+            if(i > 1) {
                 const wi = wnaf[--i];
                 const digit = wi >> 16;
                 let zeroes = wi & 0xffff;
  
                 const n = Math.abs(digit);
                 const table = digit < 0 ? neg : pos;
- 
-                if ((n << 2) < (1 << width)) {
+                if((n << 2) < (1 << width)) {
                     const highest = bitLength(n);
                     const scale = width - highest;
                     const lowBits = n ^ (1 << (highest - 1));
@@ -163,9 +162,8 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
                 R = R.timesPow2(zeroes);
             }
 
-            while (i > 0) {
-                const wi = wnaf[--i];
-                const digit = wi >> 16;
+            while(i > 0) {
+                const wi = wnaf[--i], digit = wi >> 16;
  
                 const table = digit < 0 ? neg : pos; 
                 R = R.double().add(table[Math.abs(digit) >>> 1]);
@@ -180,19 +178,20 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             let xCleanExt = xExt.clone();
             xCleanExt = field.setBit(xCleanExt, 0, 0);
 
-            const a = parameters.a ?? 0;
             const traceX = onb ? field.traceOnb(xCleanExt) : field.trace(xCleanExt);
-            if ((traceX === 1 && a === 0) || (traceX === 0 && a === 1)) xCleanExt = field.setBit(xCleanExt, 0, 1);
+            if((traceX === 1 && parameters.a === 0) || (traceX === 0 && parameters.a === 1))
+                xCleanExt = field.setBit(xCleanExt, 0, 1);
 
             const xClean = toInternal(xCleanExt);
             const x2 = field.sqr(xClean);
             let rhs = field.mul(x2, xClean);
-            if (a === 1) rhs = rhs.xor(x2);
-            if (b) rhs = rhs.xor(b);
+            if(parameters.a === 1) rhs = rhs.xor(x2);
+            if(b) rhs = rhs.xor(b);
 
             let z = field.solve_quad(field.mul(rhs, field.invert(x2)));
             const traceZ = field.trace(z);
-            if ((traceZ === 0 && bit === 1) || (traceZ === 1 && bit === 0)) z = field.setBit(z, 0, 1 ^ field.testBit(z, 0));
+            if((traceZ === 0 && bit === 1) || (traceZ === 1 && bit === 0))
+                z = field.setBit(z, 0, 1 ^ field.testBit(z, 0));
 
             return new Point(xClean, field.mul(z, xClean));
         }

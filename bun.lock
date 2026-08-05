@@ -9,7 +9,7 @@
         "bn.js": "^5.2.3",
       },
       "devDependencies": {
-        "@li0ard/gost": "^0.2.0",
+        "@li0ard/gost": "^0.2.2",
         "@peculiar/asn1-schema": "^2.8.0",
         "@peculiar/asn1-x509": "^2.8.0",
         "@types/bn.js": "^5.2.0",
@@ -24,7 +24,7 @@
   "packages": {
     "@gerrit0/mini-shiki": ["@gerrit0/mini-shiki@3.23.0", "", { "dependencies": { "@shikijs/engine-oniguruma": "^3.23.0", "@shikijs/langs": "^3.23.0", "@shikijs/themes": "^3.23.0", "@shikijs/types": "^3.23.0", "@shikijs/vscode-textmate": "^10.0.2" } }, "sha512-bEMORlG0cqdjVyCEuU0cDQbORWX+kYCeo0kV1lbxF5bt4r7SID2l9bqsxJEM0zndaxpOUT7riCyIVEuqq/Ynxg=="],
 
-    "@li0ard/gost": ["@li0ard/gost@0.2.0", "", { "dependencies": { "@noble/curves": "^2.2.0", "@noble/hashes": "^2.2.0" }, "peerDependencies": { "typescript": "^5" } }, "sha512-Vf5r8YIi775qwGzosdL83Ocx9bUycogUEMTuuVbjX1MgVaW8rHDbg5aRjDEvgfs/Fs182/pVwC/MjFP5lc/BlQ=="],
+    "@li0ard/gost": ["@li0ard/gost@0.2.2", "", { "dependencies": { "@noble/curves": "^2.2.0", "@noble/hashes": "^2.2.0" }, "peerDependencies": { "typescript": "^5" } }, "sha512-K/p99JosYtqmtLkBp+EBvGKPXARri0HWPPfNaRJ4TSROzK2Jsa+/9RUyigrXktJCiGkbi8nqS1Mwj720gC2uRw=="],
 
     "@noble/curves": ["@noble/curves@2.2.0", "", { "dependencies": { "@noble/hashes": "2.2.0" } }, "sha512-T/BoHgFXirb0ENSPBquzX0rcjXeM6Lo892a2jlYJkqk83LqZx0l1Of7DzlKJ6jkpvMrkHSnAcgb5JegL8SeIkQ=="],
 

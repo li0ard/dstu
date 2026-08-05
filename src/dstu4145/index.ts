@@ -10,27 +10,27 @@ import BN from "bn.js";
 /** Create DSTU 4145-2002 signer (Big-Endian) */
 export const dstu4145 = (parameters: DSTUParameters) => {
     const curve = binaryWeierstrass(parameters);
-    const { Field, Point, truncate } = curve;
+    const { Field, Point, truncate, lengths } = curve;
 
     const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> =>
         Point.BASE.mul(Field.fromHexStringOrBytes(secretKey)).negate().toBytes(isCompressed);
 
     const randomPrivateKey = (): TRet<Uint8Array> => Field.toBytes(
-        truncate(new BN(randomBytes(curve.lengths.scalarByteLength))),
-        curve.lengths.scalarByteLength
+        truncate(new BN(randomBytes(lengths.scalarByteLength))),
+        lengths.scalarByteLength
     )
 
     const computePresign = (rand?: TArg<Uint8Array>) => {
         const e = truncate(rand
             ? new BN(rand)
-            : new BN(randomBytes(curve.lengths.scalarByteLength))
+            : new BN(randomBytes(lengths.scalarByteLength))
         );
         if(rand && e.isZero()) throw new Error("Invalid custom rand for presign (rand = 0)");
         if(e.isZero()) return computePresign(rand);
-        const xR = Point.BASE.mul(e).x;
-        if(xR.isZero()) return computePresign(rand);
+        const Fe = Point.BASE.mul(e).x;
+        if(Fe.isZero()) return computePresign(rand);
 
-        return { Fe: xR, e }
+        return { Fe, e }
     }
 
     const prepareHash = (digest: TArg<Uint8Array>) => {
@@ -44,18 +44,18 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         digest: TArg<Uint8Array>,
         rand?: TArg<Uint8Array>
     ): TRet<Uint8Array> => {
-        const d = new BN(secretKey).mod(curve.ORDER);
-        const h = prepareHash(digest);
+        const d = new BN(secretKey),
+            h = prepareHash(digest),
+            { Fe, e } = computePresign(rand);
 
-        const { Fe, e } = computePresign(rand);
         const r = truncate(curve.toExternalField(Field.mul(h, Fe)))
-        if (r.isZero()) return sign(secretKey, digest, rand);
+        if(r.isZero()) return sign(secretKey, digest, rand);
         const s = e.add(d.mul(r)).mod(curve.ORDER);
-        if (s.isZero()) return sign(secretKey, digest, rand);
+        if(s.isZero()) return sign(secretKey, digest, rand);
 
         return concatBytes(
-            Field.toBytes(s, curve.lengths.scalarByteLength),
-            Field.toBytes(r, curve.lengths.scalarByteLength),
+            Field.toBytes(s, lengths.scalarByteLength),
+            Field.toBytes(r, lengths.scalarByteLength),
         );
     }
 
@@ -64,18 +64,18 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         digest: TArg<Uint8Array>,
         signature: TArg<Uint8Array>
     ): boolean => {
-        if(signature.length != curve.lengths.signatureByteLength) throw new Error("Invalid signature length");
+        if(signature.length != lengths.signatureByteLength) throw new Error("Invalid signature length");
         const Q = Point.fromBytes(publicKey);
-        const _s = curve.Field.fromHexStringOrBytes(signature.subarray(0, curve.lengths.scalarByteLength)),
-            _r = curve.Field.fromHexStringOrBytes(signature.subarray(curve.lengths.scalarByteLength));
-        if (_s.isZero() || _s.gte(curve.ORDER) || _r.isZero() || _r.gte(curve.ORDER))
+        const s = Field.fromHexStringOrBytes(signature.subarray(0, lengths.scalarByteLength)),
+            r = Field.fromHexStringOrBytes(signature.subarray(lengths.scalarByteLength));
+        if(s.isZero() || s.gte(curve.ORDER) || r.isZero() || r.gte(curve.ORDER))
             return false;
 
         const h = prepareHash(digest);
-        const R = Point.BASE.mulWnaf(_s).add(Q.mulWnaf(_r));
+        const R = Point.BASE.mulWnaf(s).add(Q.mulWnaf(r));
         const y = truncate(curve.toExternalField(Field.mul(h, R.x)));
 
-        return y.eq(_r);
+        return y.eq(r);
     }
 
     const keygen = (isCompressed = false): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
@@ -90,7 +90,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         sign,
         verify,
         keygen,
-        lengths: curve.lengths
+        lengths
     });
 }
 

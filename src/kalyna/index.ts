@@ -27,9 +27,9 @@ export const column = (
 
 export abstract class Kalyna implements Cipher {
     /** Block size */
-    public readonly blockSize: number;
+    readonly blockSize: number;
     /** Key size */
-    public readonly keySize: number;
+    readonly keySize: number;
 
     private erk!: TArg<BigUint64Array>;
     private drk!: TArg<BigUint64Array>;
@@ -183,7 +183,7 @@ export abstract class Kalyna implements Cipher {
     }
 
     /** Encrypt block */
-    public encrypt(block: TArg<Uint8Array>): TRet<Uint8Array> {
+    encrypt(block: TArg<Uint8Array>): TRet<Uint8Array> {
         if(block.length != this.blockSize)
             throw new Error(`Incorrect length (need - ${this.blockSize}, got - ${block.length})`);
         const t1 = new BigUint64Array(this.N), t2 = new BigUint64Array(this.N);
@@ -200,7 +200,7 @@ export abstract class Kalyna implements Cipher {
     }
 
     /** Decrypt block */
-    public decrypt(block: TArg<Uint8Array>): TRet<Uint8Array> {
+    decrypt(block: TArg<Uint8Array>): TRet<Uint8Array> {
         if(block.length != this.blockSize)
             throw new Error(`Incorrect length (need - ${this.blockSize}, got - ${block.length})`);
         const t1 = new BigUint64Array(this.N), t2 = new BigUint64Array(this.N);

@@ -1,6 +1,6 @@
 {
   "name": "@li0ard/dstu",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "module",
@@ -30,7 +30,7 @@
     "docs": "typedoc --options .config/typedoc/config.cjs"
   },
   "devDependencies": {
-    "@li0ard/gost": "^0.2.0",
+    "@li0ard/gost": "^0.2.2",
     "@peculiar/asn1-schema": "^2.8.0",
     "@peculiar/asn1-x509": "^2.8.0",
     "@types/bn.js": "^5.2.0",

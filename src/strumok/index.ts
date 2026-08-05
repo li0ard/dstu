@@ -22,8 +22,8 @@ const T = (w: bigint): bigint => (
 
 /** Strumok stream cipher */
 export class Strumok {
-    public readonly blockSize = 128;
-    public readonly keySize: number;
+    readonly blockSize = 128;
+    readonly keySize: number;
     private S: BigUint64Array;
     private r: BigUint64Array;
     private key: BigUint64Array;

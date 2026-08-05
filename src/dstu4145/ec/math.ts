@@ -42,33 +42,34 @@ const MUL_WINDOW = 4, MUL_TABLE_SIZE = 1 << MUL_WINDOW;
 const bn2LE = (x: BN, numWords: number): Uint32Array => {
     const arr = new Uint32Array(numWords);
     const bytes = x.toArray("le");
-    for (let i = 0; i < bytes.length; i++) arr[i >> 2] |= bytes[i] << ((i & 3) * 8);
+    for(let i = 0; i < bytes.length; i++) arr[i >> 2] |= bytes[i] << ((i & 3) * 8);
+
     return arr;
 }
  
 const le2BN = (arr: Uint32Array): BN => {
     const bytes = new Uint8Array(arr.length * 4);
-    for (let i = 0; i < arr.length; i++) {
+    for(let i = 0; i < arr.length; i++) {
         const w = arr[i];
         bytes[i * 4] = w & 0xff;
         bytes[i * 4 + 1] = (w >>> 8) & 0xff;
         bytes[i * 4 + 2] = (w >>> 16) & 0xff;
         bytes[i * 4 + 3] = (w >>> 24) & 0xff;
     }
+
     return new BN(bytes, "le");
 }
 
 const xorShiftedWordInto = (arr: Uint32Array, val: number, shift: number): void => {
-    if (val === 0 || shift < 0) return;
- 
+    if(val === 0 || shift < 0) return;
     const wordShift = shift >>> 5, bitShift = shift & 31;
-    if (bitShift === 0) {
-        if (wordShift < arr.length) arr[wordShift] ^= (val >>> 0);
+    if(bitShift === 0) {
+        if(wordShift < arr.length) arr[wordShift] ^= (val >>> 0);
     } else {
         const lo = (val << bitShift) >>> 0;
         const hi = (val >>> (WORD_BITS - bitShift)) >>> 0;
-        if (wordShift < arr.length) arr[wordShift] ^= lo;
-        if (wordShift + 1 < arr.length) arr[wordShift + 1] ^= hi;
+        if(wordShift < arr.length) arr[wordShift] ^= lo;
+        if(wordShift + 1 < arr.length) arr[wordShift + 1] ^= hi;
     }
 }
 
@@ -77,7 +78,7 @@ export const computeMod = (m: number, ks: number[]): BN => {
     const modulo = new BN(0);
     modulo.setn(m, 1);
     modulo.setn(0, 1);
-    for (const i of ks) modulo.setn(i, 1);
+    for(const i of ks) modulo.setn(i, 1);
 
     return modulo;
 }
@@ -87,12 +88,12 @@ export const createField = (m: number, ks: number[]) => {
     const modulo = computeMod(m, ks);
     /*const mod = (f: BN): BN => {
         const cmp = f.cmp(modulo);
-        if (cmp === 0) return new BN(0);
-        if (cmp < 0) return f.clone();
+        if(cmp === 0) return new BN(0);
+        if(cmp < 0) return f.clone();
 
         let bag = f;
         const vl = modulo.bitLength();
-        while (true) {
+        while(true) {
             bag = bag.xor(modulo.ushln(bag.bitLength() - vl));
             if (bag.bitLength() < vl) return bag;
         }
@@ -100,73 +101,69 @@ export const createField = (m: number, ks: number[]) => {
     
     const mul = (x: BN, v: BN): BN => {
         let bag = new BN(0), shift = x;
-        for (let i = 0; i < v.bitLength(); i++) {
-            if (v.testn(i)) bag = bag.xor(shift);
+        for(let i = 0; i < v.bitLength(); i++) {
+            if(v.testn(i)) bag = bag.xor(shift);
             shift = shift.ushln(1);
         }
 
         return mod(bag);
-    }
-    */
+    }*/
 
     const wordsPerElement = Math.ceil(m / WORD_BITS);
     const wordsForProduct = 2 * wordsPerElement;
     const vl = modulo.bitLength();
 
     const bMod = (f: BN): BN => {
-        if (f.bitLength() <= m) return f.clone();
- 
+        if(f.bitLength() <= m) return f.clone();
+
         let bag = f;
-        while (bag.bitLength() > m) bag = bag.xor(modulo.ushln(bag.bitLength() - vl));
+        while(bag.bitLength() > m) bag = bag.xor(modulo.ushln(bag.bitLength() - vl));
         return bag;
     }
 
     const mod = (f: BN): BN => {
-        if (f.bitLength() <= m) return f.clone();
- 
-        const numWords = Math.max(wordsForProduct, Math.ceil(f.bitLength() / WORD_BITS) + 1);
-        const words = bn2LE(f, numWords);
- 
+        if(f.bitLength() <= m) return f.clone();
+
+        const words = bn2LE(f, Math.max(wordsForProduct, Math.ceil(f.bitLength() / WORD_BITS) + 1));
         for (let i = words.length - 1; i >= wordsPerElement; i--) {
             const T = words[i];
             if (T === 0) continue;
             words[i] = 0;
             const base = i * WORD_BITS - m;
             xorShiftedWordInto(words, T, base);
-            for (const k of ks) xorShiftedWordInto(words, T, base + k);
+            for(const k of ks) xorShiftedWordInto(words, T, base + k);
         }
- 
+
         return bMod(le2BN(words));
     }
 
     const mul = (x: BN, v: BN): BN => {
         const table = new Array<BN>(MUL_TABLE_SIZE);
         table[0] = new BN(0);
-        for (let i = 1; i < MUL_TABLE_SIZE; i++) {
+        for(let i = 1; i < MUL_TABLE_SIZE; i++) {
             const lowBit = i & (-i);
             const lowBitIdx = Math.log2(lowBit) | 0;
             table[i] = table[i ^ lowBit].xor(x.ushln(lowBitIdx));
         }
- 
+
         const vb = v.bitLength();
-        const numWindows = Math.ceil(vb / MUL_WINDOW);
         let acc = new BN(0);
-        for (let win = numWindows - 1; win >= 0; win--) {
+        for(let win = Math.ceil(vb / MUL_WINDOW) - 1; win >= 0; win--) {
             let windowVal = 0;
-            for (let b = 0; b < MUL_WINDOW; b++) {
+            for(let b = 0; b < MUL_WINDOW; b++) {
                 const bitPos = win * MUL_WINDOW + b;
                 if (bitPos < vb && v.testn(bitPos)) windowVal |= (1 << b);
             }
             acc = acc.ushln(MUL_WINDOW).xor(table[windowVal]);
         }
- 
+
         return mod(acc);
     }
 
     const sqr = (x: BN): BN => {
         const bytes = x.toArray();
         const out = new Uint8Array(bytes.length * 2);
-        for (let i = 0; i < bytes.length; i++) {
+        for(let i = 0; i < bytes.length; i++) {
             const v = SQR_PRECOMP[bytes[i]];
             out[2 * i] = (v >> 8) & 0xff;
             out[2 * i + 1] = v & 0xff;
@@ -180,41 +177,48 @@ export const createField = (m: number, ks: number[]) => {
 
     const trace = (x: BN): 0 | 1 => {
         let t = x;
-        for (let i = 1; i < m; i++) t = sqr(t).xor(x);
+        for(let i = 1; i < m; i++) t = sqr(t).xor(x);
         return testBit(t, 0);
     }
 
     const traceOnb = (x: BN): 0 | 1 => {
         let t = 0;
-        for (let i = 0; i < m; i++) t ^= testBit(x, i);
+        for(let i = 0; i < m; i++) t ^= testBit(x, i);
         return t as 0 | 1;
+    }
+
+    const htrace = (x: BN): BN => {
+        let ht = x;
+        for(let i = 1; i <= Math.floor((m - 1) / 2); i++) ht = sqr(sqr(ht)).xor(x);
+        return ht;
     }
 
     const invert = (f: BN): BN => {
         let r = mod(f), s = modulo;
         let u = new BN(1), v = new BN(0);
 
-        while (r.bitLength() > 1) {
+        while(r.bitLength() > 1) {
             let j = s.bitLength() - r.bitLength();
-            if (j < 0) {
-                [r, s] = [s, r];
-                [u, v] = [v, u];
+            if(j < 0) {
+                let buf = r;
+                r = s;
+                s = buf;
+                buf = u;
+                u = v;
+                v = buf;
                 j = -j;
             }
             s = s.xor(r.ushln(j));
             v = v.xor(u.ushln(j));
         }
+
         return u;
     }
 
     const solve_quad = (v: BN): BN => {
-        const a = mod(v);
+        const a = mod(v), z = htrace(a);
+        if(sqr(z).xor(z).cmp(a) == 0) return mod(z);
 
-        let z = a.clone();
-        for (let idx = 1; idx <= Math.floor((m - 1) / 2); idx++) z = sqr(sqr(z)).xor(a);
-
-        const w = sqr(z).xor(z);
-        if (w.cmp(a) == 0) return mod(z);
         throw new Error("squad eq fail: no square root exists");
     }
 
@@ -227,9 +231,9 @@ export const createField = (m: number, ks: number[]) => {
     const toBytes = (x: BN, length?: number): TRet<Uint8Array> => new Uint8Array(x.toArray("be", length));
 
     return Object.freeze({
-        MODULO: modulo,
-        LENGTH: Math.ceil(m/8),
-        mod, mul, sqr, testBit, setBit, trace, traceOnb, invert, solve_quad,
-        fromHexStringOrBytes, toBytes, hashToField
+        MODULO: modulo, LENGTH: Math.ceil(m/8),
+        mod, mul, sqr, invert, solve_quad,
+        testBit, setBit, trace, traceOnb, hashToField,
+        fromHexStringOrBytes, toBytes
     });
 }

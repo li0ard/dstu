@@ -5,8 +5,8 @@ import { column } from "../kalyna/index.js";
 const r = 0x00F0F0F0F0F0F0F3n;
 
 abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
-    public readonly outputLen: number;
-    public readonly canXOF = false;
+    readonly outputLen: number;
+    readonly canXOF = false;
 
     private readonly rounds: number;
     private readonly stSize: number;
@@ -198,7 +198,7 @@ export class Kupyna256 extends Kupyna<Kupyna256> {
     }
     clone(): Kupyna256 { return this._cloneInto(); }
     /** Create hash instance */
-    public static create(): Kupyna256 { return new Kupyna256(); }
+    static create(): Kupyna256 { return new Kupyna256(); }
 }
 
 /** Kupyna 512 bit version */
@@ -216,49 +216,49 @@ export class Kupyna512 extends Kupyna<Kupyna512> {
     }
     clone(): Kupyna512 { return this._cloneInto(); }
     /** Create hash instance */
-    public static create(): Kupyna512 { return new Kupyna512(); }
+    static create(): Kupyna512 { return new Kupyna512(); }
 }
 
 /** Kupyna 48 bit version */
 export class Kupyna48 extends KupynaDerived<Kupyna256> {
     /** Kupyna 48 bit version */
     constructor() { super(Kupyna256.create, -6); }
-    /** Create hash instance */
-    public static create(): Kupyna48 { return new Kupyna48(); }
     _cloneInto(to?: Kupyna48): Kupyna48 {
         to ||= new Kupyna48();
         to.buffer = new Uint8Array(this.buffer);
         return to;
     }
     clone(): Kupyna48 { return this._cloneInto(); }
+    /** Create hash instance */
+    static create(): Kupyna48 { return new Kupyna48(); }
 }
 
 /** Kupyna 304 bit version */
 export class Kupyna304 extends KupynaDerived<Kupyna512> {
     /** Kupyna 304 bit version */
     constructor() { super(Kupyna512.create, -38); }
-    /** Create hash instance */
-    public static create(): Kupyna304 { return new Kupyna304(); }
     _cloneInto(to?: Kupyna304): Kupyna304 {
         to ||= new Kupyna304();
         to.buffer = new Uint8Array(this.buffer);
         return to;
     }
     clone(): Kupyna304 { return this._cloneInto(); }
+    /** Create hash instance */
+    static create(): Kupyna304 { return new Kupyna304(); }
 }
 
 /** Kupyna 384 bit version */
 export class Kupyna384 extends KupynaDerived<Kupyna512> {
     /** Kupyna 384 bit version */
     constructor() { super(Kupyna512.create, -48); }
-    /** Create hash instance */
-    public static create(): Kupyna384 { return new Kupyna384(); }
     _cloneInto(to?: Kupyna384): Kupyna384 {
         to ||= new Kupyna384();
         to.buffer = new Uint8Array(this.buffer);
         return to;
     }
     clone(): Kupyna384 { return this._cloneInto(); }
+    /** Create hash instance */
+    static create(): Kupyna384 { return new Kupyna384(); }
 }
 
 /** Kupyna 48 bit version */
