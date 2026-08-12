@@ -50,15 +50,15 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
                 lbd = field.mul(tmp, field.invert(tmp2));
 
                 x2 = field.sqr(lbd);
-                if(parameters.a === 1) x2 = field.setBit(x2, 0, 1 ^ field.testBit(x2, 0));
-                x2 = x2.xor(lbd).xor(x0).xor(x1);
+                if(parameters.a === 1) x2.setn(0, !x2.testn(0));
+                x2.ixor(lbd).ixor(x0).ixor(x1);
             } else {
                 if(y1.cmp(y0) !== 0) return pz;
                 if(x1.isZero()) return pz;
                 lbd = x1.xor(field.mul(p.y, field.invert(p.x)));
                 x2 = field.sqr(lbd);
-                if(parameters.a === 1) x2 = field.setBit(x2, 0, 1 ^ field.testBit(x2, 0));
-                x2 = x2.xor(lbd);
+                if(parameters.a === 1) x2.setn(0, !x2.testn(0));
+                x2.ixor(lbd);
             }
 
             const y2 = field.mul(lbd, x1.xor(x2)).xor(x2).xor(y1);
@@ -91,8 +91,7 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
 
         compress(): BN {
             const tmp = field.mul(field.invert(this.x), this.y);
-
-            return field.setBit(toExternal(this.x), 0, field.trace(tmp));
+            return toExternal(this.x).setn(0, field.trace(tmp));
         }
 
         toBytes(isCompressed = false): TRet<Uint8Array> {
@@ -174,24 +173,24 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
         }
 
         static expand(xExt: BN): Point {
-            const bit = field.testBit(xExt, 0);
-            let xCleanExt = xExt.clone();
-            xCleanExt = field.setBit(xCleanExt, 0, 0);
+            const bit = xExt.testn(0);
+            const xCleanExt = xExt.clone();
+            xCleanExt.setn(0, 0);
 
             const traceX = onb ? field.traceOnb(xCleanExt) : field.trace(xCleanExt);
             if((traceX === 1 && parameters.a === 0) || (traceX === 0 && parameters.a === 1))
-                xCleanExt = field.setBit(xCleanExt, 0, 1);
+                xCleanExt.setn(0, 1);
 
             const xClean = toInternal(xCleanExt);
             const x2 = field.sqr(xClean);
-            let rhs = field.mul(x2, xClean);
-            if(parameters.a === 1) rhs = rhs.xor(x2);
-            if(b) rhs = rhs.xor(b);
+            const rhs = field.mul(x2, xClean);
+            if(parameters.a === 1) rhs.ixor(x2);
+            if(b) rhs.ixor(b);
 
-            let z = field.solve_quad(field.mul(rhs, field.invert(x2)));
+            const z = field.solve_quad(field.mul(rhs, field.invert(x2)));
             const traceZ = field.trace(z);
-            if((traceZ === 0 && bit === 1) || (traceZ === 1 && bit === 0))
-                z = field.setBit(z, 0, 1 ^ field.testBit(z, 0));
+            if((traceZ === 0 && bit) || (traceZ === 1 && !bit))
+                z.setn(0, !z.testn(0));
 
             return new Point(xClean, field.mul(z, xClean));
         }
@@ -208,18 +207,15 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
         }
     }
 
-    const k = order.bitLength() - 1;
-    const truncate = (x: BN) => x.maskn(k);
-
     // Precompute
     Point.BASE.mulWnaf(new BN(3));
 
     return Object.freeze({
         Field: field, Point,
         ORDER: order,
+        MASK: order.bitLength() - 1,
         parameters, lengths,
         isOnb: !!onb,
-        truncate, 
         toInternalField: toInternal,
         toExternalField: toExternal
     });

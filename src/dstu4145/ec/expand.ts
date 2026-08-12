@@ -16,32 +16,32 @@ export const expandPoint = (
     const b = (onb && converter) ? converter.onbToPb(bInt) : bInt;
     
     const x = field.fromHexStringOrBytes(xBytes);
-    const bit = field.testBit(x, 0);
+    const bit = x.testn(0);
     let xClean = x.clone();
-    xClean = field.setBit(xClean, 0, 0);
+    xClean.setn(0, 0);
 
     const traceX = onb ? field.traceOnb(xClean) : field.trace(xClean);
     if((traceX === 1 && a === 0) || (traceX === 0 && a === 1))
-        xClean = field.setBit(xClean, 0, 1);
+        xClean.setn(0, 1);
 
-    const qxOut = xClean.clone();
+    const xOut = xClean.clone();
     if(onb && converter) xClean = converter.onbToPb(xClean);
 
     const x2 = field.sqr(xClean);
-    let rhs = field.mul(x2, xClean);
-    if(a === 1) rhs = rhs.xor(x2);
-    if(b) rhs = rhs.xor(b);
+    const rhs = field.mul(x2, xClean);
+    if(a === 1) rhs.ixor(x2);
+    if(b) rhs.ixor(b);
 
-    let z = field.solve_quad(field.mul(rhs, field.invert(x2)));
+    const z = field.solve_quad(field.mul(rhs, field.invert(x2)));
     const traceZ = field.trace(z);
-    if((traceZ === 0 && bit === 1) || (traceZ === 1 && bit === 0))
-        z = field.setBit(z, 0, 1 ^ field.testBit(z,0));
+    if((traceZ === 0 && bit) || (traceZ === 1 && !bit))
+        z.setn(0, !z.testn(0));
 
     let y = field.mul(z, xClean);
     if (onb && converter) y = converter.pbToOnb(y);
 
     return {
-        x: field.toBytes(qxOut, field.LENGTH),
+        x: field.toBytes(xOut, field.LENGTH),
         y: field.toBytes(y, field.LENGTH)
     }
 }

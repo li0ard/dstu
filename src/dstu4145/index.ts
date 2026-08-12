@@ -10,21 +10,21 @@ import BN from "bn.js";
 /** Create DSTU 4145-2002 signer (Big-Endian) */
 export const dstu4145 = (parameters: DSTUParameters) => {
     const curve = binaryWeierstrass(parameters);
-    const { Field, Point, truncate, lengths } = curve;
+    const { Field, Point, MASK, lengths } = curve;
 
     const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> =>
         Point.BASE.mul(Field.fromHexStringOrBytes(secretKey)).negate().toBytes(isCompressed);
 
     const randomPrivateKey = (): TRet<Uint8Array> => Field.toBytes(
-        truncate(new BN(randomBytes(lengths.scalarByteLength))),
+        new BN(randomBytes(lengths.scalarByteLength)).imaskn(MASK),
         lengths.scalarByteLength
     )
 
     const computePresign = (rand?: TArg<Uint8Array>) => {
-        const e = truncate(rand
+        const e = (rand
             ? new BN(rand)
             : new BN(randomBytes(lengths.scalarByteLength))
-        );
+        ).imaskn(MASK);
         if(rand && e.isZero()) throw new Error("Invalid custom rand for presign (rand = 0)");
         if(e.isZero()) return computePresign(rand);
         const Fe = Point.BASE.mul(e).x;
@@ -48,7 +48,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
             h = prepareHash(digest),
             { Fe, e } = computePresign(rand);
 
-        const r = truncate(curve.toExternalField(Field.mul(h, Fe)))
+        const r = curve.toExternalField(Field.mul(h, Fe)).imaskn(MASK);
         if(r.isZero()) return sign(secretKey, digest, rand);
         const s = e.add(d.mul(r)).mod(curve.ORDER);
         if(s.isZero()) return sign(secretKey, digest, rand);
@@ -73,7 +73,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
 
         const h = prepareHash(digest);
         const R = Point.BASE.mulWnaf(s).add(Q.mulWnaf(r));
-        const y = truncate(curve.toExternalField(Field.mul(h, R.x)));
+        const y = curve.toExternalField(Field.mul(h, R.x)).imaskn(MASK);
 
         return y.eq(r);
     }

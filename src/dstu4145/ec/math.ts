@@ -85,39 +85,16 @@ export const computeMod = (m: number, ks: number[]): BN => {
 
 /** Create `GF(2^m)` field */
 export const createField = (m: number, ks: number[]) => {
-    const modulo = computeMod(m, ks);
-    /*const mod = (f: BN): BN => {
-        const cmp = f.cmp(modulo);
-        if(cmp === 0) return new BN(0);
-        if(cmp < 0) return f.clone();
-
-        let bag = f;
-        const vl = modulo.bitLength();
-        while(true) {
-            bag = bag.xor(modulo.ushln(bag.bitLength() - vl));
-            if (bag.bitLength() < vl) return bag;
-        }
-    }
-    
-    const mul = (x: BN, v: BN): BN => {
-        let bag = new BN(0), shift = x;
-        for(let i = 0; i < v.bitLength(); i++) {
-            if(v.testn(i)) bag = bag.xor(shift);
-            shift = shift.ushln(1);
-        }
-
-        return mod(bag);
-    }*/
-
-    const wordsPerElement = Math.ceil(m / WORD_BITS);
-    const wordsForProduct = 2 * wordsPerElement;
-    const vl = modulo.bitLength();
+    const modulo = computeMod(m, ks),
+        wordsPerElement = Math.ceil(m / WORD_BITS),
+        wordsForProduct = 2 * wordsPerElement,
+        vl = modulo.bitLength();
 
     const bMod = (f: BN): BN => {
-        if(f.bitLength() <= m) return f.clone();
+        if(f.bitLength() <= m) return f;
 
-        let bag = f;
-        while(bag.bitLength() > m) bag = bag.xor(modulo.ushln(bag.bitLength() - vl));
+        const bag = f;
+        while(bag.bitLength() > m) bag.ixor(modulo.ushln(bag.bitLength() - vl));
         return bag;
     }
 
@@ -147,14 +124,14 @@ export const createField = (m: number, ks: number[]) => {
         }
 
         const vb = v.bitLength();
-        let acc = new BN(0);
+        const acc = new BN(0);
         for(let win = Math.ceil(vb / MUL_WINDOW) - 1; win >= 0; win--) {
             let windowVal = 0;
             for(let b = 0; b < MUL_WINDOW; b++) {
                 const bitPos = win * MUL_WINDOW + b;
                 if (bitPos < vb && v.testn(bitPos)) windowVal |= (1 << b);
             }
-            acc = acc.ushln(MUL_WINDOW).xor(table[windowVal]);
+            acc.iushln(MUL_WINDOW).ixor(table[windowVal]);
         }
 
         return mod(acc);
@@ -173,11 +150,10 @@ export const createField = (m: number, ks: number[]) => {
     }
 
     const testBit = (x: BN, i: number): 0 | 1 => x.testn(i) ? 1 : 0;
-    const setBit = (x: BN, i: number, v: number): BN => x.setn(i, v == 1);
 
     const trace = (x: BN): 0 | 1 => {
         let t = x;
-        for(let i = 1; i < m; i++) t = sqr(t).xor(x);
+        for(let i = 1; i < m; i++) t = sqr(t).ixor(x);
         return testBit(t, 0);
     }
 
@@ -189,12 +165,12 @@ export const createField = (m: number, ks: number[]) => {
 
     const htrace = (x: BN): BN => {
         let ht = x;
-        for(let i = 1; i <= Math.floor((m - 1) / 2); i++) ht = sqr(sqr(ht)).xor(x);
+        for(let i = 1; i <= Math.floor((m - 1) / 2); i++) ht = sqr(sqr(ht)).ixor(x);
         return ht;
     }
 
     const invert = (f: BN): BN => {
-        let r = mod(f), s = modulo;
+        let r = mod(f), s = modulo.clone();
         let u = new BN(1), v = new BN(0);
 
         while(r.bitLength() > 1) {
@@ -208,8 +184,8 @@ export const createField = (m: number, ks: number[]) => {
                 v = buf;
                 j = -j;
             }
-            s = s.xor(r.ushln(j));
-            v = v.xor(u.ushln(j));
+            s.ixor(r.ushln(j));
+            v.ixor(u.ushln(j));
         }
 
         return u;
@@ -217,14 +193,14 @@ export const createField = (m: number, ks: number[]) => {
 
     const solve_quad = (v: BN): BN => {
         const a = mod(v), z = htrace(a);
-        if(sqr(z).xor(z).cmp(a) == 0) return mod(z);
+        if(sqr(z).ixor(z).cmp(a) == 0) return mod(z);
 
         throw new Error("squad eq fail: no square root exists");
     }
 
     const hashToField = (hash: TArg<Uint8Array>): BN => {
         const h = new BN(hash);
-        return h.maskn(Math.min(m, h.bitLength()));
+        return h.imaskn(Math.min(m, h.bitLength()));
     }
 
     const fromHexStringOrBytes = (v: string | Uint8Array): BN => new BN(v, 16);
@@ -233,7 +209,7 @@ export const createField = (m: number, ks: number[]) => {
     return Object.freeze({
         MODULO: modulo, LENGTH: Math.ceil(m/8),
         mod, mul, sqr, invert, solve_quad,
-        testBit, setBit, trace, traceOnb, hashToField,
+        trace, traceOnb, hashToField,
         fromHexStringOrBytes, toBytes
     });
 }

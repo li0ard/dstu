@@ -6,11 +6,11 @@ import { createField } from "./math.js";
 const decompress_matrix = (compress_mulp: BN, mulp: Uint16Array) => {
     const mlen = Math.ceil(compress_mulp.bitLength() / 9);
     if(mlen === 0) return;
-    let temp = compress_mulp;
+    const temp = compress_mulp;
     const mask = new BN(0x1ff);
     for(let j = mlen - 1; j >= 0; j--) {
         mulp[j] = temp.and(mask).toNumber();
-        temp = temp.shrn(9);
+        temp.ishrn(9);
     }
 }
 
@@ -66,16 +66,16 @@ export const init_onb_parameters = (parameters: DSTUShortParameters) => {
 
     return Object.freeze({
         onbToPb: (x: BN): BN => {
-            let r = new BN(0);
+            const r = new BN(0);
             for(let p = 0; p < m; p++)
-                if(x.testn(p)) r = r.xor(toPb[m - 1 - p]);
+                if(x.testn(p)) r.ixor(toPb[m - 1 - p]);
 
             return r;
         },
         pbToOnb: (x: BN): BN => {
-            let r = new BN(0);
+            const r = new BN(0);
             for(let j = 0; j < m; j++)
-                if(x.testn(j)) r = r.xor(toOnb[j]);
+                if(x.testn(j)) r.ixor(toOnb[j]);
 
             return r;
         }
