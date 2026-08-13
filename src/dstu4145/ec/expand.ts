@@ -30,12 +30,11 @@ export const expandPoint = (
     const x2 = field.sqr(xClean);
     const rhs = field.mul(x2, xClean);
     if(a === 1) rhs.ixor(x2);
-    if(b) rhs.ixor(b);
+    rhs.ixor(b);
 
     const z = field.solve_quad(field.mul(rhs, field.invert(x2)));
     const traceZ = field.trace(z);
-    if((traceZ === 0 && bit) || (traceZ === 1 && !bit))
-        z.setn(0, !z.testn(0));
+    if((traceZ === 0 && bit) || (traceZ === 1 && !bit)) field.invBit(z, 0);
 
     let y = field.mul(z, xClean);
     if (onb && converter) y = converter.pbToOnb(y);

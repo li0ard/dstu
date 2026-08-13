@@ -24,10 +24,10 @@ export const init_onb_parameters = (parameters: DSTUShortParameters) => {
     const root1 = new BN(hexToBytes(onb.root1), "le"),
           root2 = new BN(hexToBytes(onb.root2), "le");
 
-    const multiplyOnb = (x: BN, y: BN): BN => {
+    const multiplyOnb = (x: BN): BN => {
         const r = new BN(0);
         const xb = (pos: number) => (x.testn(pos % m) ? 1 : 0);
-        const yb = (pos: number) => (y.testn(pos % m) ? 1 : 0);
+        const yb = (pos: number) => (root2.testn(pos % m) ? 1 : 0);
 
         for(let j = 0; j < m; j++) {
             let bit = 0;
@@ -55,12 +55,12 @@ export const init_onb_parameters = (parameters: DSTUShortParameters) => {
 
     const toPb: BN[] = new Array(m);
     toPb[0] = root1.clone();
-    const { mul } = createField(m, ks);
-    for(let i = 1; i < m; i++) toPb[i] = mul(toPb[i - 1], toPb[i - 1]);
+    const { sqr } = createField(m, ks);
+    for(let i = 1; i < m; i++) toPb[i] = sqr(toPb[i - 1]);
 
     const _toOnb: BN[] = new Array(m);
-    _toOnb[0] = new BN(1).shln(m).subn(1);
-    for(let i = 1; i < m; i++) _toOnb[i] = multiplyOnb(_toOnb[i - 1], root2);
+    _toOnb[0] = new BN(1).ishln(m).isubn(1);
+    for(let i = 1; i < m; i++) _toOnb[i] = multiplyOnb(_toOnb[i - 1]);
 
     const toOnb = _toOnb.map(reverseBits);
 

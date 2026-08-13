@@ -137,6 +137,8 @@ export const createField = (m: number, ks: number[]) => {
         return mod(acc);
     }
 
+    const div = (x: BN, v: BN): BN => mul(x, invert(v));
+
     const sqr = (x: BN): BN => {
         const bytes = x.toArray();
         const out = new Uint8Array(bytes.length * 2);
@@ -150,6 +152,7 @@ export const createField = (m: number, ks: number[]) => {
     }
 
     const testBit = (x: BN, i: number): 0 | 1 => x.testn(i) ? 1 : 0;
+    const invBit = (x: BN, i: number) => x.setn(i, !x.testn(i));
 
     const trace = (x: BN): 0 | 1 => {
         let t = x;
@@ -208,8 +211,8 @@ export const createField = (m: number, ks: number[]) => {
 
     return Object.freeze({
         MODULO: modulo, LENGTH: Math.ceil(m/8),
-        mod, mul, sqr, invert, solve_quad,
-        trace, traceOnb, hashToField,
+        mod, mul, div, sqr, invert,
+        solve_quad, trace, traceOnb, hashToField, invBit,
         fromHexStringOrBytes, toBytes
     });
 }

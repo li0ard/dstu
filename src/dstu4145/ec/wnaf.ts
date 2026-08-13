@@ -8,7 +8,7 @@ const DEFAULT_CUTOFFS = [13, 41, 121, 337, 897, 2305];
 export const bitLength = (n: number): number => n === 0 ? 0 : 32 - Math.clz32(n);
 
 const compactNaf = (k: BN): Int32Array => {
-    if(k.bitLength() >= 1 << 16) throw new Error("'k' must have bitlength < 2^16");
+    if(k.bitLength() >= (1 << 16)) throw new Error("'k' must have bitlength < 2^16");
     if(k.isZero()) return new Int32Array(0);
 
     const _3k = k.shln(1).add(k);

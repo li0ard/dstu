@@ -46,22 +46,20 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
 
             let lbd: BN, x2: BN;
             if(x0.cmp(x1) !== 0) {
-                const tmp = y0.xor(y1), tmp2 = x0.xor(x1);
-                lbd = field.mul(tmp, field.invert(tmp2));
-
+                lbd = field.div(y0.xor(y1), x0.xor(x1));
                 x2 = field.sqr(lbd);
-                if(parameters.a === 1) x2.setn(0, !x2.testn(0));
+                if(parameters.a === 1) field.invBit(x2, 0); 
                 x2.ixor(lbd).ixor(x0).ixor(x1);
             } else {
                 if(y1.cmp(y0) !== 0) return pz;
                 if(x1.isZero()) return pz;
-                lbd = x1.xor(field.mul(p.y, field.invert(p.x)));
+                lbd = x1.xor(field.div(p.y, p.x));
                 x2 = field.sqr(lbd);
-                if(parameters.a === 1) x2.setn(0, !x2.testn(0));
+                if(parameters.a === 1) field.invBit(x2, 0);
                 x2.ixor(lbd);
             }
 
-            const y2 = field.mul(lbd, x1.xor(x2)).xor(x2).xor(y1);
+            const y2 = field.mul(lbd, x1.xor(x2)).ixor(x2).ixor(y1);
             pz.x = x2;
             pz.y = y2;
 
@@ -185,12 +183,11 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             const x2 = field.sqr(xClean);
             const rhs = field.mul(x2, xClean);
             if(parameters.a === 1) rhs.ixor(x2);
-            if(b) rhs.ixor(b);
+            rhs.ixor(b);
 
             const z = field.solve_quad(field.mul(rhs, field.invert(x2)));
             const traceZ = field.trace(z);
-            if((traceZ === 0 && bit) || (traceZ === 1 && !bit))
-                z.setn(0, !z.testn(0));
+            if((traceZ === 0 && bit) || (traceZ === 1 && !bit)) field.invBit(z, 0);
 
             return new Point(xClean, field.mul(z, xClean));
         }
