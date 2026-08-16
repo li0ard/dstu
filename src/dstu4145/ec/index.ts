@@ -14,6 +14,7 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
 
     const order = field.fromHexStringOrBytes(parameters.order);
     const b = toInternal(field.fromHexStringOrBytes(parameters.b));
+    const c = field.sqrt(b);
 
     const scalarByteLength = Math.ceil(order.bitLength() / 8),
         pointByteLength = field.LENGTH * 2
@@ -23,6 +24,26 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
         scalarByteLength,
         signatureByteLength: scalarByteLength * 2
     });
+
+    const Madd = (X1: BN, Z1: BN, X2: BN, Z2: BN, x: BN): [BN, BN] => {
+        const A = field.mul(X1, Z2);
+        const B = field.mul(Z1, X2);
+        const T = field.mul(A, B);
+        const Znew = field.sqr(A.ixor(B));
+        const Xnew = field.mul(Znew, x).ixor(T);
+
+        return [Xnew, Znew];
+    }
+
+    const Mdouble = (X: BN, Z: BN): [BN, BN] => {
+        const X2 = field.sqr(X);
+        const Z2 = field.sqr(Z);
+        const T = field.sqr(field.mul(Z2, c));
+        const Znew = field.mul(X2, Z2);
+        const Xnew = field.sqr(X2).ixor(T);
+
+        return [Xnew, Znew];
+    }
 
     // Point operations
     class Point {
@@ -66,7 +87,7 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return pz;
         }
 
-        mul(f: BN): Point {
+        mul_(f: BN): Point {
             let pz = Point.ZERO.clone(), p = this.clone();
             for(let j = f.bitLength() - 1; j >= 0; j--) {
                 if(f.testn(j)) {
@@ -81,9 +102,40 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return pz;
         }
 
-        negate(): Point { return new Point(this.x, this.x.xor(this.y)); }
+        mul(f: BN): Point {
+            if(f.isZero() || this.x.isZero()) return Point.ZERO.clone();
 
-        clone(): Point { return new Point(this.x, this.y); }
+            let X1 = this.x.clone(), Z1 = new BN(1);
+            const xSqr = field.sqr(this.x);
+            let X2 = field.sqr(xSqr).ixor(b), Z2 = xSqr.clone();
+
+            for(let i = f.bitLength() - 2; i >= 0; i--) {
+                if(f.testn(i)) {
+                    [X1, Z1] = Madd(X1, Z1, X2, Z2, this.x);
+                    [X2, Z2] = Mdouble(X2, Z2);
+                } else {
+                    [X2, Z2] = Madd(X2, Z2, X1, Z1, this.x);
+                    [X1, Z1] = Mdouble(X1, Z1);
+                }
+            }
+
+            // Convert projective coords to affine
+            if(Z1.isZero()) return Point.ZERO.clone();
+            if(Z2.isZero()) return this.negate();
+            const A = field.mul(this.x, Z1).ixor(X1);
+            const B = field.mul(this.x, Z2).ixor(X2);
+            const Z1Z2x = field.mul(field.mul(Z1, Z2), this.x);
+            const D = field.invert(field.mul(Z1Z2x, Z1));
+            const N = field.mul(A, B).ixor(field.mul(field.mul(Z1, Z2), xSqr.ixor(this.y)));
+            const Xk = field.mul(X1, field.mul(Z1Z2x, D));
+            const Yk = field.mul(field.mul(A, N), D).ixor(this.y);
+
+            return new Point(Xk, Yk);
+        }
+
+        negate(): Point { return new Point(this.x.clone(), this.x.xor(this.y)); }
+
+        clone(): Point { return new Point(this.x.clone(), this.y.clone()); }
 
         isZero(): boolean { return this.x.isZero() && this.y.isZero(); }
 

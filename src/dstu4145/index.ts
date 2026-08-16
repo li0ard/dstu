@@ -13,7 +13,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
     const { Field, Point, MASK, lengths } = curve;
 
     const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> =>
-        Point.BASE.mul(Field.fromHexStringOrBytes(secretKey)).negate().toBytes(isCompressed);
+        Point.BASE.mulWnaf(Field.fromHexStringOrBytes(secretKey)).negate().toBytes(isCompressed);
 
     const randomPrivateKey = (): TRet<Uint8Array> => Field.toBytes(
         new BN(randomBytes(lengths.scalarByteLength)).imaskn(MASK),
@@ -27,7 +27,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         ).imaskn(MASK);
         if(rand && e.isZero()) throw new Error("Invalid custom rand for presign (rand = 0)");
         if(e.isZero()) return computePresign(rand);
-        const Fe = Point.BASE.mul(e).x;
+        const Fe = Point.BASE.mulWnaf(e).x;
         if(Fe.isZero()) return computePresign(rand);
 
         return { Fe, e }
@@ -72,7 +72,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
             return false;
 
         const h = prepareHash(digest);
-        const R = Point.BASE.mulWnaf(s).add(Q.mulWnaf(r));
+        const R = Point.BASE.mulWnaf(s).add(Q.mul(r));
         const y = curve.toExternalField(Field.mul(h, R.x)).imaskn(MASK);
 
         return y.eq(r);

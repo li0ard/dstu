@@ -154,6 +154,12 @@ export const createField = (m: number, ks: number[]) => {
     const testBit = (x: BN, i: number): 0 | 1 => x.testn(i) ? 1 : 0;
     const invBit = (x: BN, i: number) => x.setn(i, !x.testn(i));
 
+    const sqrt = (x: BN): BN => {
+        let r = mod(x);
+        for(let i = 0; i < m - 1; i++) r = sqr(r);
+        return r;
+    }
+
     const trace = (x: BN): 0 | 1 => {
         let t = x;
         for(let i = 1; i < m; i++) t = sqr(t).ixor(x);
@@ -211,7 +217,7 @@ export const createField = (m: number, ks: number[]) => {
 
     return Object.freeze({
         MODULO: modulo, LENGTH: Math.ceil(m/8),
-        mod, mul, div, sqr, invert,
+        mod, mul, div, sqr, sqrt, invert,
         solve_quad, trace, traceOnb, hashToField, invBit,
         fromHexStringOrBytes, toBytes
     });
