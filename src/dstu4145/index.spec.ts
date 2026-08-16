@@ -16,9 +16,6 @@ const performTest = (
     expect(publicKey).toStrictEqual(expectedPk as TRet<Uint8Array>);
     expect(signature).toStrictEqual(expectedSign as TRet<Uint8Array>);
     expect(signer.verify(publicKey, digest, signature)).toBeTrue();
-
-    const keypair = signer.keygen(true);
-    expect(signer.verify(keypair.publicKey, digest, signer.sign(keypair.secretKey, digest))).toBeTrue();
 }
 
 
@@ -67,4 +64,14 @@ describe("[CORE] DSTU 4145-2002 (ONB)", () => {
 
         performTest(dstu173_onb_test, privateKey, digest, rand, expectedPk, expectedSign);
     }, 10000);
+});
+
+test("[CORE] DSTU 4145-2002", () => {
+    const digest = hexToBytes("09C9C44277910C9AAEE486883A2EB95B7180166DDF73532EEB76EDAEF52247FF");
+
+    for(const signer of [dstu163_test, dstu173_onb_test, dstu257, dstu431]) {
+        const keypair = signer.keygen();
+        const signature = signer.sign(keypair.secretKey, digest);
+        expect(signer.verify(keypair.publicKey, digest, signature)).toBeTrue();
+    }
 });
