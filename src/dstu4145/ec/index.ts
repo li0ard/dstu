@@ -68,16 +68,16 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
 
         mul(f: BN): Point {
             let pz = Point.ZERO.clone(), p = this.clone();
-
             for(let j = f.bitLength() - 1; j >= 0; j--) {
                 if(f.testn(j)) {
                     pz = pz.add(p);
-                    p = p.add(p);
+                    p = p.double();
                 } else {
                     p = pz.add(p);
-                    pz = pz.add(pz);
+                    pz = pz.double();
                 }
             }
+
             return pz;
         }
 
@@ -88,7 +88,7 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
         isZero(): boolean { return this.x.isZero() && this.y.isZero(); }
 
         compress(): BN {
-            const tmp = field.mul(field.invert(this.x), this.y);
+            const tmp = field.div(this.y, this.x);
             return toExternal(this.x).setn(0, field.trace(tmp));
         }
 
@@ -185,7 +185,7 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             if(parameters.a === 1) rhs.ixor(x2);
             rhs.ixor(b);
 
-            const z = field.solve_quad(field.mul(rhs, field.invert(x2)));
+            const z = field.solve_quad(field.div(rhs, x2));
             const traceZ = field.trace(z);
             if((traceZ === 0 && bit) || (traceZ === 1 && !bit)) field.invBit(z, 0);
 

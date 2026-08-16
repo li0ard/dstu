@@ -32,7 +32,7 @@ export const expandPoint = (
     if(a === 1) rhs.ixor(x2);
     rhs.ixor(b);
 
-    const z = field.solve_quad(field.mul(rhs, field.invert(x2)));
+    const z = field.solve_quad(field.div(rhs, x2));
     const traceZ = field.trace(z);
     if((traceZ === 0 && bit) || (traceZ === 1 && !bit)) field.invBit(z, 0);
 
