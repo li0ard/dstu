@@ -12,7 +12,7 @@ const incrementCounterAt = (ctr: TArg<Uint8Array>, pos: number) => {
 export const ctr = (cipher: Kalyna, iv: TArg<Uint8Array>): StreamMode => {
     if (iv.length !== cipher.blockSize) throw new Error("Invalid IV size");
 
-    return {
+    return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             const keystreamBlocks: Uint8Array[] = [];
             const ctr = cipher.encrypt(iv);
@@ -23,5 +23,5 @@ export const ctr = (cipher: Kalyna, iv: TArg<Uint8Array>): StreamMode => {
 
             return xorBytes(concatBytes(...keystreamBlocks), msg);
         }
-    }
+    });
 }

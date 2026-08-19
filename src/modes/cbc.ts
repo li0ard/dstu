@@ -6,17 +6,15 @@ import { xorBytes } from "../utils.js";
 /** Cipher Block Chaining (CBC) mode */
 export const cbc = (cipher: Kalyna, iv: TArg<Uint8Array>): BlockMode => {
     if (iv.length !== cipher.blockSize) throw new Error("Invalid IV size");
-    const encrypter = cipher.encrypt.bind(cipher);
-    const decrypter = cipher.decrypt.bind(cipher);
 
-    return {
+    return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
             if (plaintext.length % cipher.blockSize !== 0) throw new Error("Plaintext not aligned");
             let buf: TArg<Uint8Array> = new Uint8Array(iv);
 
             const output = new Uint8Array(plaintext.length);
             for(let i = 0; i < plaintext.length; i += cipher.blockSize) {
-                const blk = encrypter(xorBytes(plaintext.subarray(i, i + cipher.blockSize), buf));
+                const blk = cipher.encrypt(xorBytes(plaintext.subarray(i, i + cipher.blockSize), buf));
                 output.set(blk, i);
                 buf = blk.slice();
             }
@@ -30,11 +28,11 @@ export const cbc = (cipher: Kalyna, iv: TArg<Uint8Array>): BlockMode => {
             const output = new Uint8Array(ciphertext.length);
             for(let i = 0; i < ciphertext.length; i += cipher.blockSize) {
                 const blk = ciphertext.subarray(i,i + cipher.blockSize);
-                output.set(xorBytes(decrypter(blk), buf), i);
+                output.set(xorBytes(cipher.decrypt(blk), buf), i);
                 buf = blk.slice();
             }
 
             return output;
         }
-    }
+    });
 }
