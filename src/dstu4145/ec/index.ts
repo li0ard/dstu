@@ -87,21 +87,6 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return pz;
         }
 
-        mul_(f: BN): Point {
-            let pz = Point.ZERO.clone(), p = this.clone();
-            for(let j = f.bitLength() - 1; j >= 0; j--) {
-                if(f.testn(j)) {
-                    pz = pz.add(p);
-                    p = p.double();
-                } else {
-                    p = pz.add(p);
-                    pz = pz.double();
-                }
-            }
-
-            return pz;
-        }
-
         mul(f: BN): Point {
             if(f.isZero() || this.x.isZero()) return Point.ZERO.clone();
 
@@ -124,9 +109,10 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             if(Z2.isZero()) return this.negate();
             const A = field.mul(this.x, Z1).ixor(X1);
             const B = field.mul(this.x, Z2).ixor(X2);
-            const Z1Z2x = field.mul(field.mul(Z1, Z2), this.x);
+            const Z1Z2 = field.mul(Z1, Z2);
+            const Z1Z2x = field.mul(Z1Z2, this.x);
             const D = field.invert(field.mul(Z1Z2x, Z1));
-            const N = field.mul(A, B).ixor(field.mul(field.mul(Z1, Z2), xSqr.ixor(this.y)));
+            const N = field.mul(A, B).ixor(field.mul(Z1Z2, xSqr.ixor(this.y)));
             const Xk = field.mul(X1, field.mul(Z1Z2x, D));
             const Yk = field.mul(field.mul(A, N), D).ixor(this.y);
 
@@ -222,42 +208,42 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return R;
         }
 
-        static expand(xExt: BN): Point {
-            const bit = xExt.testn(0);
-            const xCleanExt = xExt.clone();
-            xCleanExt.setn(0, 0);
-
-            const traceX = onb ? field.traceOnb(xCleanExt) : field.trace(xCleanExt);
-            if((traceX === 1 && parameters.a === 0) || (traceX === 0 && parameters.a === 1))
-                xCleanExt.setn(0, 1);
-
-            const xClean = toInternal(xCleanExt);
-            const x2 = field.sqr(xClean);
-            const rhs = field.mul(x2, xClean);
-            if(parameters.a === 1) rhs.ixor(x2);
-            rhs.ixor(b);
-
-            const z = field.solve_quad(field.div(rhs, x2));
-            const traceZ = field.trace(z);
-            if((traceZ === 0 && bit) || (traceZ === 1 && !bit)) field.invBit(z, 0);
-
-            return new Point(xClean, field.mul(z, xClean));
-        }
-
+        /** Deserialize point from bytes (compressed/uncompressed) */
         static fromBytes(bytes: TArg<Uint8Array>): Point {
+            // Uncompressed
             if(bytes.length == pointByteLength) return new Point(
                 toInternal(field.fromHexStringOrBytes(bytes.subarray(0, field.LENGTH))),
                 toInternal(field.fromHexStringOrBytes(bytes.subarray(field.LENGTH)))
             );
-            else if(bytes.length == field.LENGTH)
-                return Point.expand(field.fromHexStringOrBytes(bytes));
+            // Compressed (need to recover y-coord)
+            else if(bytes.length == field.LENGTH) {
+                const xExt = field.fromHexStringOrBytes(bytes);
+                const bit = xExt.testn(0);
+                xExt.setn(0, 0);
+
+                const traceX = onb ? field.traceOnb(xExt) : field.trace(xExt);
+                if((traceX === 1 && parameters.a === 0) || (traceX === 0 && parameters.a === 1))
+                    xExt.setn(0, 1);
+
+                const x = toInternal(xExt);
+                const x2 = field.sqr(x);
+                const rhs = field.mul(x2, x);
+                if(parameters.a === 1) rhs.ixor(x2);
+                rhs.ixor(b);
+
+                const z = field.solve_quad(field.div(rhs, x2));
+                const traceZ = field.trace(z);
+                if((traceZ === 0 && bit) || (traceZ === 1 && !bit)) field.invBit(z, 0);
+
+                return new Point(x, field.mul(z, x));
+            }
             else
                 throw new Error(`Invalid bytes length. Must be ${pointByteLength} for uncompressed and ${field.LENGTH} for compressed`);
         }
     }
 
     // Precompute
-    Point.BASE.mulWnaf(new BN(3));
+    Point.BASE.precomp(4);
 
     return Object.freeze({
         Field: field, Point,

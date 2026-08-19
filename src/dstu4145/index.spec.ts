@@ -1,9 +1,9 @@
 import { describe, test, expect } from "bun:test";
 import { dstu257, dstu4145, dstu431, DSTU_163_TEST, DSTU_173_ONB_TEST } from ".";
-import { hexToBytes, type TRet } from "@noble/hashes/utils.js";
+import { hexToBytes, randomBytes, type TRet } from "@noble/hashes/utils.js";
 
 const performTest = (
-    signer: any,
+    signer: ReturnType<typeof dstu4145>,
     privateKey: Uint8Array,
     digest: Uint8Array,
     rand: Uint8Array,
@@ -66,8 +66,8 @@ describe("[CORE] DSTU 4145-2002 (ONB)", () => {
     }, 10000);
 });
 
-test("[CORE] DSTU 4145-2002", () => {
-    const digest = hexToBytes("09C9C44277910C9AAEE486883A2EB95B7180166DDF73532EEB76EDAEF52247FF");
+test.skipIf(process.env.SKIP_ALL == "1")("[CORE] DSTU 4145-2002 (random keypair)", () => {
+    const digest = randomBytes(32);
 
     for(const signer of [dstu163_test, dstu173_onb_test, dstu257, dstu431]) {
         const keypair = signer.keygen();

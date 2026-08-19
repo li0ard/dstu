@@ -60,16 +60,16 @@ const le2BN = (arr: Uint32Array): BN => {
     return new BN(bytes, "le");
 }
 
-const xorShiftedWordInto = (arr: Uint32Array, val: number, shift: number): void => {
+const xorShiftedWordInto = (dst: Uint32Array, val: number, shift: number): void => {
     if(val === 0 || shift < 0) return;
     const wordShift = shift >>> 5, bitShift = shift & 31;
     if(bitShift === 0) {
-        if(wordShift < arr.length) arr[wordShift] ^= (val >>> 0);
+        if(wordShift < dst.length) dst[wordShift] ^= (val >>> 0);
     } else {
         const lo = (val << bitShift) >>> 0;
         const hi = (val >>> (WORD_BITS - bitShift)) >>> 0;
-        if(wordShift < arr.length) arr[wordShift] ^= lo;
-        if(wordShift + 1 < arr.length) arr[wordShift + 1] ^= hi;
+        if(wordShift < dst.length) dst[wordShift] ^= lo;
+        if(wordShift + 1 < dst.length) dst[wordShift + 1] ^= hi;
     }
 }
 
@@ -91,11 +91,11 @@ export const createField = (m: number, ks: number[]) => {
         vl = modulo.bitLength();
 
     const bMod = (f: BN): BN => {
+        // `f` will be mutated
         if(f.bitLength() <= m) return f;
 
-        const bag = f;
-        while(bag.bitLength() > m) bag.ixor(modulo.ushln(bag.bitLength() - vl));
-        return bag;
+        while(f.bitLength() > m) f.ixor(modulo.ushln(f.bitLength() - vl));
+        return f;
     }
 
     const mod = (f: BN): BN => {
