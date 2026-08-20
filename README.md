@@ -20,11 +20,12 @@ npm i @li0ard/dstu
 
 ## Supported algorithms
 
-- Curves and DSA (DSTU 4145-2002, polynomial and optimal normal basis)
+- Curves and ECDSA (DSTU 4145-2002, polynomial and optimal normal basis)
 - Kalyna cipher (DSTU 7624:2014)
 - Kupyna hash function (DSTU 7564:2014)
     - Supports KMAC
 - Strumok stream cipher (DSTU 8845:2019)
+- ECIES encryption schema over Twisted Edwards curves (DSTU 9041:2020)
 
 ## Supported cipher modes
 

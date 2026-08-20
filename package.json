@@ -1,6 +1,6 @@
 {
   "name": "@li0ard/dstu",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "module",
@@ -41,6 +41,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@noble/curves": "^2.3.0",
     "@noble/hashes": "^2.3.0",
     "bn.js": "^5.2.3"
   },
