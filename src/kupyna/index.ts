@@ -1,6 +1,7 @@
 import { concatBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { bytesToUint64sLE, numberToBytesLE, uint64sToBytesLE } from "../utils.js";
+import { bytesToUint64sLE, uint64sToBytesLE } from "../utils.js";
 import { column } from "../kalyna/index.js";
+import { numberToBytesLE } from "@noble/curves/utils.js";
 
 const r = 0x00F0F0F0F0F0F0F3n;
 

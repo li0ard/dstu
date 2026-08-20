@@ -1,4 +1,4 @@
-import { bytesToHex, copyBytes, hexToBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { bytesToNumberBE, bytesToNumberLE, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
 
 export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
     const mlen = Math.min(a.length, b.length);
@@ -36,24 +36,6 @@ export const uint64sToBytesLE = (w: TArg<BigUint64Array>): TRet<Uint8Array> => {
     return result;
 }
 
-export const hexToNumber = (hex: string): bigint => {
-    if (typeof hex !== 'string') throw new Error('hex string expected, got ' + typeof hex);
-    return hex === '' ? 0n : BigInt('0x' + hex);
-}
-
-export const bytesToNumberBE = (bytes: TArg<Uint8Array>): bigint => hexToNumber(bytesToHex(bytes));
-
-export const numberToBytesBE = (n: number | bigint, len: number): TRet<Uint8Array> => {
-    let num = n.toString(16).padStart(len * 2, '0');
-    while (num.length % 2 != 0) num = "0" + num;
-    return hexToBytes(num);
-}
-
-export const bytesToNumberLE = (bytes: TArg<Uint8Array>): bigint =>
-    hexToNumber(bytesToHex(copyBytes(bytes).reverse()));
-
-export const numberToBytesLE = (n: number | bigint, len: number): TRet<Uint8Array> =>
-    numberToBytesBE(n, len).reverse();
 
 export const byte = (a: bigint) => Number(a & 0xFFn);
 
@@ -81,11 +63,4 @@ export const gf2mMul = (blockSize: number, a: TArg<Uint8Array>, b: TArg<Uint8Arr
     }
     
     return result;
-}
-
-export const equalBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): boolean => {
-    if (a.length !== b.length) return false;
-    let diff = 0;
-    for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
-    return diff === 0;
 }

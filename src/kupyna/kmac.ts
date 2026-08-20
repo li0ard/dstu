@@ -1,6 +1,7 @@
 import type { Hash, TArg, TRet } from "@noble/hashes/utils.js";
-import { numberToBytesLE, uint64sToBytesLE } from "../utils.js";
+import { uint64sToBytesLE } from "../utils.js";
 import { Kupyna256, Kupyna384, Kupyna512 } from "./index.js";
+import { numberToBytesLE } from "@noble/curves/utils.js";
 
 const dpad: Readonly<Uint8Array> = numberToBytesLE(128, 128);
 

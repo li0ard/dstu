@@ -2,8 +2,8 @@ import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { Kalyna } from "../kalyna/index.js";
 import { ctr } from "./ctr.js";
 import { gmac } from "./mac.js";
-import { equalBytes } from "../utils.js";
 import type { AEADMode } from "../types.js";
+import { equalBytes } from "@noble/curves/utils.js";
 
 /** Galois counter (GCM) mode (AEAD) */
 export const gcm = (cipher: Kalyna, iv: TArg<Uint8Array>, q = 16): AEADMode => Object.freeze({

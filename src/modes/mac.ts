@@ -1,8 +1,9 @@
 import { concatBytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { Kalyna } from "../kalyna/index.js";
 import { pad } from "../padding.js";
-import { gf2mMul, numberToBytesLE, xorBytes } from "../utils.js";
+import { gf2mMul, xorBytes } from "../utils.js";
 import type { GMACMode, MACMode } from "../types.js";
+import { numberToBytesLE } from "@noble/curves/utils.js";
 
 /** Message Authentication Code (MAC) mode */
 export const cmac = (cipher: Kalyna, q = 16): MACMode => Object.freeze({
