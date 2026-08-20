@@ -36,6 +36,7 @@ npm i @li0ard/dstu
 - Galois Counter mode (GCM)
 - Message Authentication Code mode (MAC and GMAC)
 - Output Feedback mode (OFB)
+- Key wrapping (KW)
 
 ## Supported curves
 
