@@ -4,27 +4,29 @@ import { bitGet, bitLen, bytesToNumberBE, randomBytes, type TArg, type TRet } fr
 import { concatBytes } from "@noble/hashes/utils.js";
 
 export const dstu9041Curve = (parameters: EdwardsOpts) => {
+    if(parameters.a != 2n) throw new Error("Unsuppored `a` parameter, must be 2");
     if(mod(parameters.p, 8n) != 5n) throw new Error("Unsupported `p` prime");
     const Fp = Field(parameters.p), Fn = Field(parameters.n);
+    const { a, d, Gx, Gy } = parameters;
 
-    const isValidXY = (x: bigint, y: bigint) => {
+    const isValidXY = (x: bigint, y: bigint): boolean => {
         const x2 = Fp.sqr(x);
         const y2 = Fp.sqr(y);
-        const left = Fp.add(x2, Fp.mul(parameters.a, y2));
-        const right = Fp.add(Fp.ONE, Fp.mul(parameters.d, Fp.mul(x2, y2)));
+        const left = Fp.add(x2, Fp.mul(a, y2));
+        const right = Fp.add(Fp.ONE, Fp.mul(d, Fp.mul(x2, y2)));
 
         return Fp.eql(left, right);
     }
 
-    if(!isValidXY(parameters.Gx, parameters.Gy)) throw new Error("Invalid base point");
+    if(!isValidXY(Gx, Gy)) throw new Error("Invalid base point");
 
     const p_minus_1 = Fp.sub(Fp.ZERO, Fp.ONE);
     const p_minus_1_over_2 = Fp.div(Fp.sub(Fp.ORDER, Fp.ONE), 2n);
-    const a_over_d = Fp.div(parameters.a, parameters.d);
+    const a_over_d = Fp.div(a, d);
 
     class Point {
-        static BASE = Point.fromAffine(parameters.Gx, parameters.Gy);
-        static ZERO = Point.fromAffine(1n, 0n);
+        static BASE = new Point(Gx, Gy, Fp.ONE);
+        static ZERO = new Point(Fp.ONE, Fp.ZERO, Fp.ONE);
         static Fp = Fp;
         static Fn = Fn;
         constructor(
@@ -48,7 +50,7 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
             const B = Fp.sqr(A);
             const C = Fp.mul(this.X, other.X);
             const D = Fp.mul(this.Y, other.Y);
-            const E = Fp.mul(parameters.d, Fp.mul(C, D));
+            const E = Fp.mul(d, Fp.mul(C, D));
             const F = Fp.sub(B, E);
             const G = Fp.add(B, E);
 
@@ -56,7 +58,7 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
             const other_sum = Fp.add(other.X, other.Y);
             const cross = Fp.mul(self_sum, other_sum);
 
-            const xr = Fp.mul(Fp.mul(A, G), Fp.sub(C, Fp.mul(parameters.a, D)));
+            const xr = Fp.mul(Fp.mul(A, G), Fp.sub(C, Fp.mul(a, D)));
             const yr = Fp.mul(Fp.mul(A, F), Fp.sub(Fp.sub(cross, C), D));
             const zr = Fp.mul(F, G);
 
@@ -69,7 +71,7 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
             let S = new Point(this.X, this.Y, this.Z);
             for (let i = bitLen(scalar) - 2; i >= 0; i--) {
                 S = S.add(S);
-                if(bitGet(scalar, i) == 1n) S = S.add(this);
+                if(bitGet(scalar, i) == Fp.ONE) S = S.add(this);
             }
 
             return S;
@@ -101,7 +103,6 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
 
         static fromX(x: bigint): Point {
             const x2 = Fp.sqr(x);
-
             if(
                 Fp.eql(x, Fp.ZERO) ||
                 Fp.eql(x, Fp.ONE) ||
@@ -110,7 +111,7 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
             ) throw new Error("Invalid x-coordinate, can't recover y");
 
             const num = Fp.sub(Fp.ONE, x2);
-            const denom = Fp.sub(parameters.a, Fp.mul(parameters.d, x2));
+            const denom = Fp.sub(a, Fp.mul(d, x2));
             const v = Fp.div(num, denom);
 
             if(Fp.pow(v, p_minus_1_over_2) != Fp.ONE)
