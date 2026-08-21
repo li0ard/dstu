@@ -7,6 +7,7 @@
   "exports": {
     ".": "./index.js",
     "./dstu4145.js": "./dstu4145/index.js",
+    "./dstu9041.js": "./dstu9041/index.js",
     "./kalyna.js": "./kalyna/index.js",
     "./kupyna.js": "./kupyna/index.js",
     "./modes.js": "./modes/index.js",

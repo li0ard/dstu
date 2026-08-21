@@ -6,3 +6,4 @@ export * from "./gcm.js";
 export * from "./kw.js";
 export * from "./mac.js";
 export * from "./ofb.js";
+export * from "./xts.js";

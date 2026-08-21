@@ -37,6 +37,7 @@ npm i @li0ard/dstu
 - Message Authentication Code mode (MAC and GMAC)
 - Output Feedback mode (OFB)
 - Key wrapping (KW)
+- XEX Tweakable Block Ciphertext Stealing (XTS)
 
 ## Supported curves
 

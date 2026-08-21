@@ -16,7 +16,7 @@ export const cbc = (cipher: Kalyna, iv: TArg<Uint8Array>): BlockMode => {
             for(let i = 0; i < plaintext.length; i += cipher.blockSize) {
                 const blk = cipher.encrypt(xorBytes(plaintext.subarray(i, i + cipher.blockSize), buf));
                 output.set(blk, i);
-                buf = blk.slice();
+                buf = blk;
             }
 
             return output;
@@ -29,7 +29,7 @@ export const cbc = (cipher: Kalyna, iv: TArg<Uint8Array>): BlockMode => {
             for(let i = 0; i < ciphertext.length; i += cipher.blockSize) {
                 const blk = ciphertext.subarray(i,i + cipher.blockSize);
                 output.set(xorBytes(cipher.decrypt(blk), buf), i);
-                buf = blk.slice();
+                buf = blk;
             }
 
             return output;
