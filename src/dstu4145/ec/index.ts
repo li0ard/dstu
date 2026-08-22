@@ -16,6 +16,16 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
     const b = toInternal(field.fromHexStringOrBytes(parameters.b));
     const c = field.sqrt(b);
 
+    const isValidXY = (x: BN, y: BN): boolean => {
+        const x2 = field.sqr(x);
+        const lhs = field.sqr(y).ixor(field.mul(x,y));
+        const rhs = field.mul(x2, x).ixor(b);
+        // `a` must be 0 or 1, so if a = 1, just add x^2
+        if(parameters.a === 1) rhs.ixor(x2);
+
+        return lhs.eq(rhs);
+    }
+
     const scalarByteLength = Math.ceil(order.bitLength() / 8),
         pointByteLength = field.LENGTH * 2
     const lengths = Object.freeze({
@@ -55,7 +65,15 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
  
         _precomp?: { pos: Point[]; neg: Point[] };
         _double?: Point;
-        constructor(public x: BN, public y: BN) {}
+        constructor(public x: BN, public y: BN) { this.assertValidity(); }
+
+        assertValidity(): this {
+            // Skip if point is infinity
+            if(!isValidXY(this.x, this.y) && !this.x.isZero() && !this.y.isZero())
+                throw new Error("Assertation failed: point isn't on curve");
+
+            return this;
+        }
 
         add(p: Point): Point {
             const pz = Point.ZERO.clone();
@@ -109,12 +127,13 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             if(Z2.isZero()) return this.negate();
             const A = field.mul(this.x, Z1).ixor(X1);
             const B = field.mul(this.x, Z2).ixor(X2);
-            const Z1Z2 = field.mul(Z1, Z2);
-            const Z1Z2x = field.mul(Z1Z2, this.x);
-            const D = field.invert(field.mul(Z1Z2x, Z1));
-            const N = field.mul(A, B).ixor(field.mul(Z1Z2, xSqr.ixor(this.y)));
-            const Xk = field.mul(X1, field.mul(Z1Z2x, D));
-            const Yk = field.mul(field.mul(A, N), D).ixor(this.y);
+            const C = field.mul(Z1, Z2);
+            const D = field.mul(C, this.x);
+            const E = field.invert(field.mul(D, Z1));
+            const F = field.mul(A, B).ixor(field.mul(C, xSqr.ixor(this.y)));
+
+            const Xk = field.mul(X1, field.mul(D, E));
+            const Yk = field.mul(field.mul(A, F), E).ixor(this.y);
 
             return new Point(Xk, Yk);
         }
@@ -233,7 +252,8 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
 
                 const z = field.solve_quad(field.div(rhs, x2));
                 const traceZ = field.trace(z);
-                if((traceZ === 0 && bit) || (traceZ === 1 && !bit)) field.invBit(z, 0);
+                if((traceZ === 0 && bit) || (traceZ === 1 && !bit))
+                    field.invBit(z, 0);
 
                 return new Point(x, field.mul(z, x));
             }
