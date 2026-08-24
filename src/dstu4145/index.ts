@@ -47,6 +47,8 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         const d = new BN(secretKey),
             h = prepareHash(digest),
             { Fe, e } = computePresign(rand);
+        if(d.isZero() || d.gte(curve.ORDER))
+            throw new Error("Invalid private key, must be in range 1 < key < order");
 
         const r = curve.toExternalField(Field.mul(h, Fe)).imaskn(MASK);
         if(r.isZero()) return sign(secretKey, digest, rand);
