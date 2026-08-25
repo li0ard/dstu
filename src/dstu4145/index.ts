@@ -13,7 +13,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
     const { Field, Point, MASK, lengths } = curve;
 
     const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> =>
-        Point.BASE.mulWnaf(Field.fromHexStringOrBytes(secretKey)).negate().toBytes(isCompressed);
+        Point.BASE.mul(Field.fromHexStringOrBytes(secretKey)).negate().toBytes(isCompressed);
 
     const randomPrivateKey = (): TRet<Uint8Array> => Field.toBytes(
         new BN(randomBytes(lengths.scalarByteLength)).imaskn(MASK),
@@ -27,7 +27,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         ).imaskn(MASK);
         if(rand && e.isZero()) throw new Error("Invalid custom rand for presign (rand = 0)");
         if(e.isZero()) return computePresign(rand);
-        const Fe = Point.BASE.mulWnaf(e).x;
+        const Fe = Point.BASE.mul(e).x;
         if(Fe.isZero()) return computePresign(rand);
 
         return { Fe, e }
@@ -80,6 +80,23 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         return y.eq(r);
     }
 
+    const getSharedKey = (
+        secretKeyA: TArg<Uint8Array>,
+        publicKeyB: TArg<Uint8Array>,
+        withCofactor = true
+    ): TRet<Uint8Array> => {
+        const d = new BN(secretKeyA), Q = Point.fromBytes(publicKeyB);
+        if(d.isZero() || d.gte(curve.ORDER))
+            throw new Error("Invalid private key, must be in range 1 < key < order");
+
+        let R = Q.mul(d);
+        if(withCofactor) R = R.mul(curve.parameters.cofactor);
+        if(R.isZero())
+            throw new Error(`Invalid parameters, shared secret is point at infinity`);
+
+        return Field.toBytes(curve.toExternalField(R.x), lengths.fieldByteLength);
+    }
+
     const keygen = (isCompressed = false): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
         const secretKey = randomPrivateKey();
         const publicKey = getPublicKey(secretKey, isCompressed);
@@ -89,6 +106,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
 
     return Object.freeze({
         getPublicKey,
+        getSharedKey,
         sign,
         verify,
         keygen,

@@ -105,7 +105,8 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return pz;
         }
 
-        mul(f: BN): Point {
+        mul(f: BN | number): Point {
+            if(typeof f == "number") f = new BN(f);
             if(f.isZero() || this.x.isZero()) return Point.ZERO.clone();
 
             let X1 = this.x.clone(), Z1 = new BN(1);
