@@ -137,6 +137,7 @@ const createSignerFromParameters = (params: ECBinary) => {
 
     return dstu4145({
         m, ks, a, b, order,
+        cofactor: 4 >> a as 2 | 4,
         Gx: bytesToHex(G.x),
         Gy: bytesToHex(G.y)
     });
