@@ -115,6 +115,7 @@ export const createField = (m: number, ks: number[]) => {
     }
 
     const mul = (x: BN, v: BN): BN => {
+        if(x.eq(v)) return sqr(x);
         const table = new Array<BN>(MUL_TABLE_SIZE);
         table[0] = new BN(0);
         for(let i = 1; i < MUL_TABLE_SIZE; i++) {
