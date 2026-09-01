@@ -12,6 +12,11 @@ export const dstu4145 = (parameters: DSTUParameters) => {
     const curve = binaryWeierstrass(parameters);
     const { Field, Point, MASK, lengths } = curve;
 
+    /**
+     * Computes public key for a secret key
+     * @param isCompressed - whether to return compact (default), or full key
+     * @returns Public key, full when `isCompressed=false`; short when `isCompressed=true`
+     */
     const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> =>
         Point.BASE.mul(Field.fromHexStringOrBytes(secretKey)).negate().toBytes(isCompressed);
 
@@ -20,25 +25,29 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         lengths.scalarByteLength
     )
 
-    const computePresign = (rand?: TArg<Uint8Array>) => {
-        const e = (rand
-            ? new BN(rand)
-            : new BN(randomBytes(lengths.scalarByteLength))
-        ).imaskn(MASK);
+    /**
+     * Computes presign (ephermeral keypair)
+     * @param rand Predefined secret ephermeral key
+     * @returns Ephemeral public key (`Fe`) and secret key (`e`)
+     */
+    const computePresign = (rand?: TArg<Uint8Array>): { Fe: BN, e: BN } => {
+        const e = new BN(rand ?? randomBytes(lengths.scalarByteLength)).imaskn(MASK);
         if(rand && e.isZero()) throw new Error("Invalid custom rand for presign (rand = 0)");
-        if(e.isZero()) return computePresign(rand);
+        else if(e.isZero()) return computePresign(rand);
         const Fe = Point.BASE.mul(e).x;
         if(Fe.isZero()) return computePresign(rand);
 
         return { Fe, e }
     }
 
+    /** Converts hash into field element */
     const prepareHash = (digest: TArg<Uint8Array>) => {
         let h = curve.toInternalField(Field.hashToField(digest));
         if (h.isZero()) h = new BN(1);
         return h;
     }
 
+    /** Signs a message hash with a secret key. */
     const sign = (
         secretKey: TArg<Uint8Array>,
         digest: TArg<Uint8Array>,
@@ -61,6 +70,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         );
     }
 
+    /** Verifies a signature against message hash and public key. */
     const verify = (
         publicKey: TArg<Uint8Array>,
         digest: TArg<Uint8Array>,
@@ -80,7 +90,11 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         return y.eq(r);
     }
 
-    const getSharedKey = (
+    /**
+     * Computes shared secret key
+     * @param withCofactor Multiply result by curve cofactor? (default - `true`)
+     */
+    const getSharedSecret = (
         secretKeyA: TArg<Uint8Array>,
         publicKeyB: TArg<Uint8Array>,
         withCofactor = true
@@ -106,7 +120,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
 
     return Object.freeze({
         getPublicKey,
-        getSharedKey,
+        getSharedSecret,
         sign,
         verify,
         keygen,

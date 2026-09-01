@@ -5,8 +5,8 @@ const performTest = (signer: ReturnType<typeof dstu4145>) => {
     const a = signer.keygen();
     const b = signer.keygen();
 
-    const sharedA = signer.getSharedKey(a.secretKey, b.publicKey);
-    const sharedB = signer.getSharedKey(b.secretKey, a.publicKey);
+    const sharedA = signer.getSharedSecret(a.secretKey, b.publicKey);
+    const sharedB = signer.getSharedSecret(b.secretKey, a.publicKey);
     expect(sharedA).toStrictEqual(sharedB);
 }
 
