@@ -1,6 +1,6 @@
 import { bytesToNumberBE, concatBytes, equalBytes, numberToBytesBE, type TArg, type TRet } from "@noble/curves/utils.js";
 import { kupyna256 } from "../kupyna/index.js";
-import { curve256, curve512 } from "./curve.js";
+import { curve256, curve512, dstu9041Curve } from "./curve.js";
 import { kw } from "../modes/index.js";
 import { Kalyna256, Kalyna512 } from "../kalyna/index.js";
 import { randomBytes } from "@noble/hashes/utils.js";
@@ -8,12 +8,29 @@ import { randomBytes } from "@noble/hashes/utils.js";
 const ID_KUPYNA256 = 1;
 
 const dstu9041 = (length: 256 | 512) => {
-    const MAX_LENGTH = length == 256 ? 200 : 424;
-    const PADDED_MESSAGE_BYTES = MAX_LENGTH / 8; 
-    const HASH_LENGTH_BYTES = length == 256 ? 4 : 8;
-    const STRUCT_BYTES = 1 + HASH_LENGTH_BYTES + 2 + PADDED_MESSAGE_BYTES;
-    const curve = length == 256 ? curve256 : curve512;
-    const cipher = length == 256 ? Kalyna256 : Kalyna512;
+    let MAX_LENGTH: number,
+        HASH_LENGTH_BYTES: number, 
+        curve: ReturnType<typeof dstu9041Curve>,
+        cipher: typeof Kalyna256 | Kalyna512;
+    switch(length) {
+        case 256:
+            MAX_LENGTH = 200;
+            HASH_LENGTH_BYTES = 4;
+            curve = curve256;
+            cipher = Kalyna256;
+        break;
+        case 512:
+            MAX_LENGTH = 424;
+            HASH_LENGTH_BYTES = 8;
+            curve = curve512;
+            cipher = Kalyna512;
+        break;
+        default:
+            throw new Error("Invalid length, supported only 256 and 512 bits");
+    }
+    const PADDED_MESSAGE_BYTES = MAX_LENGTH / 8, 
+        STRUCT_BYTES = 1 + HASH_LENGTH_BYTES + 2 + PADDED_MESSAGE_BYTES,
+        { Point } = curve, { Fp, Fn } = Point;
 
     const padMessage = (
         message: TArg<Uint8Array>,
@@ -32,14 +49,13 @@ const dstu9041 = (length: 256 | 512) => {
     }
 
     const buildStruct = (
-        hashId: number,
         paddedMessage: TArg<Uint8Array>,
         messageLength: TArg<Uint8Array>
     ): TRet<Uint8Array> => {
         const digest = kupyna256(concatBytes(messageLength, paddedMessage));
 
         const struct = new Uint8Array(STRUCT_BYTES);
-        struct[0] = hashId;
+        struct[0] = ID_KUPYNA256;
         struct.set(digest.subarray(digest.length - HASH_LENGTH_BYTES), 1);
         struct.set(messageLength, 1 + HASH_LENGTH_BYTES);
         struct.set(paddedMessage, 3 + HASH_LENGTH_BYTES);
@@ -49,9 +65,7 @@ const dstu9041 = (length: 256 | 512) => {
 
     const parseStruct = (struct: TArg<Uint8Array>): TRet<Uint8Array> => {
         if(struct.length != STRUCT_BYTES) throw new Error("Invalid ciphertext");
-
-        const hashId = struct[0];
-        if(hashId != ID_KUPYNA256) throw new Error("Invalid hash ID");
+        if(struct[0] != ID_KUPYNA256) throw new Error("Invalid hash ID");
 
         const embeddedHash = struct.subarray(1, HASH_LENGTH_BYTES + 1);
         const messageLength = struct.subarray(1 + HASH_LENGTH_BYTES, 3 + HASH_LENGTH_BYTES);
@@ -81,16 +95,15 @@ const dstu9041 = (length: 256 | 512) => {
         keygen: curve.keygen,
         encrypt: (message: TArg<Uint8Array>, publicKey: TArg<Uint8Array>, rand?: TArg<Uint8Array>): TRet<Uint8Array> => {
             const message_bits = message.length * 8;
-            const paddedMessage = padMessage(message, message_bits);
-            const struct = buildStruct(ID_KUPYNA256, paddedMessage, numberToBytesBE(message_bits, 2));
+            const struct = buildStruct(padMessage(message, message_bits), numberToBytesBE(message_bits, 2));
 
-            const e = curve.Point.Fn.create(bytesToNumberBE(rand ?? randomBytes(STRUCT_BYTES)));
-            const R = curve.Point.BASE.multiply(e);
-            const r = curve.Point.Fp.toBytes(R.x);
+            const e = Fn.create(bytesToNumberBE(rand ?? randomBytes(STRUCT_BYTES)));
+            const R = Point.BASE.multiply(e);
+            const r = Fp.toBytes(R.x);
 
-            const T = curve.Point.fromBytes(publicKey).multiply(e);
-            const key = curve.Point.Fp.toBytes(T.x);
-    
+            const T = Point.fromBytes(publicKey).multiply(e);
+            const key = Fp.toBytes(T.x);
+
             const plaintext = new Uint8Array(2 * STRUCT_BYTES);
             plaintext.set(struct);
             const ciphertext = kw(new cipher(key)).wrap(plaintext);
@@ -101,14 +114,14 @@ const dstu9041 = (length: 256 | 512) => {
             if(ciphertext.length != length / 2) throw new Error("Invalid ciphertext length");
 
             const r = bytesToNumberBE(ciphertext.subarray(0, STRUCT_BYTES));
-            if(!curve.Point.Fp.isValidNot0(r)) throw new Error("Invalid ciphertext");
-            const R = curve.Point.fromX(r);
-            
+            if(!Fp.isValidNot0(r)) throw new Error("Invalid ciphertext");
+            const R = Point.fromX(r);
+
             const T = R.multiply(bytesToNumberBE(privateKey));
-            const key = curve.Point.Fp.toBytes(T.x);
+            const key = Fp.toBytes(T.x);
             // KW already does unpadding
             const plaintext = kw(new cipher(key)).unwrap(ciphertext.subarray(STRUCT_BYTES));
-            
+
             return parseStruct(plaintext);
         }
     });
