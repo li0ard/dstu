@@ -122,7 +122,7 @@ const dstu9041 = (length: 256 | 512) => {
             // KW already does unpadding
             const plaintext = kw(new cipher(key)).unwrap(ciphertext.subarray(STRUCT_BYTES));
 
-            return parseStruct(plaintext);
+            return parseStruct(plaintext.subarray(0, STRUCT_BYTES));
         }
     });
 }

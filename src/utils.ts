@@ -1,4 +1,5 @@
 import { bytesToNumberBE, bytesToNumberLE, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
+import { copyBytes } from "@noble/hashes/utils.js";
 
 export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
     const mlen = Math.min(a.length, b.length);
@@ -39,12 +40,17 @@ export const uint64sToBytesLE = (w: TArg<BigUint64Array>): TRet<Uint8Array> => {
 
 export const byte = (a: bigint) => Number(a & 0xFFn);
 
+export const getGf2mReductionBytes = (blockSize: number): number[] => [
+    [0x87],
+    [0x25, 0x04],
+    [0x25, 0x01]
+][Math.log2(blockSize) - 4];
+
 export const gf2mMul = (blockSize: number, a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const temp = new Uint8Array(a);
+    const temp = copyBytes(a);
     const result = new Uint8Array(blockSize);
     
-    const reductionBytes = [[0x87], [0x25, 0x04], [0x25, 0x01]][Math.log2(blockSize) - 4];
-    
+    const reductionBytes = getGf2mReductionBytes(blockSize);
     for (let i = 0; i < blockSize * 8; i++) {
         const byteIndex = Math.floor(i / 8);
         const bitIndex = i % 8;
