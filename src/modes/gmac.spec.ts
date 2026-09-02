@@ -1,0 +1,49 @@
+import { describe, test, expect } from "bun:test";
+import type { Kalyna } from "../kalyna";
+import { gmac } from "./gmac";
+import { hexToBytes, type TRet } from "@noble/hashes/utils.js";
+import { kalyna128_256, kalyna256, kalyna256_512, kalyna512 } from "./_test_utils.test";
+
+const performTest = (
+    cipher: Kalyna,
+    msg: Uint8Array,
+    aad: Uint8Array,
+    mac: Uint8Array,
+    q = 16
+) => {
+    const mode = gmac(cipher, q);
+    expect(mode.compute(aad, msg)).toStrictEqual(mac as TRet<Uint8Array>);
+}
+
+describe("[MODE] GMAC", () => {
+    test("#1", () => performTest(
+        kalyna128_256,
+        new Uint8Array(),
+        hexToBytes("303132333435363738393A3B3C3D3E3F"),
+        hexToBytes("5AE309EE80B583C6523397ADCB5704C4")
+    ));
+
+    test("#2", () => performTest(
+        kalyna256,
+        new Uint8Array(),
+        hexToBytes("404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F"),
+        hexToBytes("FF48B56F2C26CC484B8F5952D7B3E1FE69577701C50BE96517B33921E44634CD"),
+        32
+    ));
+
+    test("#3", () => performTest(
+        kalyna256_512,
+        new Uint8Array(),
+        hexToBytes("606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F"),
+        hexToBytes("96F61FA0FDE92883C5041D748F9AE91F3A0A50415BFA1466855340A5714DC01F"),
+        32
+    ));
+
+    test("#4", () => performTest(
+        kalyna512,
+        new Uint8Array(),
+        hexToBytes("808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBF"),
+        hexToBytes("897C32E05E776FD988C5171FE70BB72949172E514E3308A871BA5BD898FB6EBD6E3897D2D55697D90D6428216C08052E3A5E7D4626F4DBBF1546CE21637357A3"),
+        64
+    ));
+});

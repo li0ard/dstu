@@ -1,7 +1,7 @@
 import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { Kalyna } from "../kalyna/index.js";
 import { ctr } from "./ctr.js";
-import { gmac } from "./mac.js";
+import { gmac } from "./gmac.js";
 import type { AEADMode } from "../types.js";
 import { equalBytes } from "@noble/curves/utils.js";
 
