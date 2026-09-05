@@ -1,7 +1,6 @@
 import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
-import type { Kalyna } from "../kalyna/index.js";
 import { gf2mMul } from "../utils.js";
-import type { GMACMode } from "../types.js";
+import type { Cipher, GMACMode } from "../types.js";
 import { numberToBytesLE } from "@noble/curves/utils.js";
 
 const xorBytesInPlace = (a: TArg<Uint8Array>, b: TArg<Uint8Array>) => {
@@ -9,7 +8,7 @@ const xorBytesInPlace = (a: TArg<Uint8Array>, b: TArg<Uint8Array>) => {
     for(let i = 0; i < a.length; i++) a[i] ^= b[i];
 }
 /** Galois Message Authentication Code (GMAC) mode */
-export const gmac = (cipher: Kalyna, q = 16): GMACMode => {
+export const gmac = (cipher: Cipher, q = 16): GMACMode => {
     const hblock = cipher.blockSize / 2;
 
     return Object.freeze({

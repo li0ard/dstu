@@ -1,9 +1,8 @@
 import type { TArg, TRet } from "@noble/hashes/utils.js";
-import type { Kalyna } from "../kalyna/index.js";
-import type { BlockMode } from "../types.js";
+import type { BlockMode, Cipher } from "../types.js";
 
 /** Cipher Feedback (CFB) mode */
-export const cfb = (cipher: Kalyna, iv: TArg<Uint8Array>, q: number = cipher.blockSize): BlockMode => {
+export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, q: number = cipher.blockSize): BlockMode => {
     if (q !== 1 && q !== 8 && q !== 16 && q !== 32 && q !== 64) throw new Error('q must be 1, 8, 16, 32, or 64');
     if (q > cipher.blockSize) throw new Error('q cannot exceed block size');
 

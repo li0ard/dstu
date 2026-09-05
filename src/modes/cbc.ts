@@ -1,10 +1,9 @@
 import type { TArg, TRet } from "@noble/hashes/utils.js";
-import type { Kalyna } from "../kalyna/index.js";
-import type { BlockMode } from "../types.js";
+import type { BlockMode, Cipher } from "../types.js";
 import { xorBytes } from "../utils.js";
 
 /** Cipher Block Chaining (CBC) mode */
-export const cbc = (cipher: Kalyna, iv: TArg<Uint8Array>): BlockMode => {
+export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
     if (iv.length !== cipher.blockSize) throw new Error("Invalid IV size");
 
     return Object.freeze({

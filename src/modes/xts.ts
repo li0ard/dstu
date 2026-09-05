@@ -1,9 +1,9 @@
 import { concatBytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
-import type { Kalyna } from "../kalyna/index.js";
 import { getGf2mReductionBytes, xorBytes } from "../utils.js";
+import type { Cipher } from "../types.js";
 
 /** XEX Tweakable Block Ciphertext Stealing (XTS) */
-export const xts = (cipher: Kalyna): {
+export const xts = (cipher: Cipher): {
     encrypt: (plaintext: TArg<Uint8Array>, tweak: TArg<Uint8Array>) => TRet<Uint8Array>,
     decrypt: (ciphertext: TArg<Uint8Array>, iv: TArg<Uint8Array>) => TRet<Uint8Array>
 } => {

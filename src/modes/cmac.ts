@@ -1,10 +1,9 @@
 import { copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
-import type { Kalyna } from "../kalyna/index.js";
-import type { MACMode } from "../types.js";
+import type { Cipher, MACMode } from "../types.js";
 import { pad } from "../padding.js";
 import { xorBytes } from "../utils.js";
 
-export const cmac = (cipher: Kalyna, q = 16): MACMode => Object.freeze({
+export const cmac = (cipher: Cipher, q = 16): MACMode => Object.freeze({
     compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
         let data = copyBytes(msg);
         const zeroBlock = new Uint8Array(cipher.blockSize);

@@ -1,7 +1,6 @@
 import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
-import type { Kalyna } from "../kalyna/index.js";
 import { xorBytes } from "../utils.js";
-import type { StreamMode } from "../types.js";
+import type { Cipher, StreamMode } from "../types.js";
 
 const incrementCounterAt = (ctr: TArg<Uint8Array>, pos: number) => {
     let j = pos;
@@ -9,7 +8,7 @@ const incrementCounterAt = (ctr: TArg<Uint8Array>, pos: number) => {
 }
 
 /** Counter (CTR) mode */
-export const ctr = (cipher: Kalyna, iv: TArg<Uint8Array>): StreamMode => {
+export const ctr = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
     if (iv.length !== cipher.blockSize) throw new Error("Invalid IV size");
 
     return Object.freeze({

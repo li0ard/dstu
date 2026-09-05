@@ -1,9 +1,8 @@
 import type { TArg, TRet } from "@noble/hashes/utils.js";
-import type { Kalyna } from "../kalyna/index.js";
-import type { BlockMode } from "../types.js";
+import type { BlockMode, Cipher } from "../types.js";
 
 /** Electronic Codebook (ECB) mode */
-export const ecb = (cipher: Kalyna): BlockMode => {
+export const ecb = (cipher: Cipher): BlockMode => {
     const encrypter = cipher.encrypt.bind(cipher);
     const decrypter = cipher.decrypt.bind(cipher);
 
