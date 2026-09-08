@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { copyBytes, hexToBytes, type TRet } from "@noble/hashes/utils.js";
-import { keywrap } from "./keywrap";
+import { keyWrap } from "./keywrap";
 import { IV256, KEY256 } from "./modes/_test_utils.test";
 
 const performTest = (
@@ -9,7 +9,7 @@ const performTest = (
     pt: Uint8Array,
     ct: Uint8Array
 ) => {
-    const mode = keywrap(key);
+    const mode = keyWrap(key);
     expect(mode.wrap(pt, iv)).toStrictEqual(ct as TRet<Uint8Array>);
     expect(mode.unwrap(ct)).toStrictEqual(pt as TRet<Uint8Array>);
 }

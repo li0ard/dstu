@@ -9,7 +9,7 @@ const IV1 = new Uint8Array([
 ]);
 
 /** Key wrap with Kalyna (`Dstu7624Wrap`) */
-export const keywrap = (kek: TArg<Uint8Array>): {
+export const keyWrap = (kek: TArg<Uint8Array>): {
     wrap: (key: TArg<Uint8Array>, iv?: TArg<Uint8Array>) => TRet<Uint8Array>,
     unwrap: (wrappedKey: TArg<Uint8Array>) => TRet<Uint8Array>,
 } => {
