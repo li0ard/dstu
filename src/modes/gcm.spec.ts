@@ -1,11 +1,11 @@
 import { describe, test, expect } from "bun:test";
-import type { Kalyna } from "../kalyna";
 import { gcm } from "./gcm";
 import { hexToBytes, type TRet } from "@noble/hashes/utils.js";
 import { IV128_256, IV256, IV256_512, IV512, kalyna128_256, kalyna256, kalyna256_512, kalyna512 } from "./_test_utils.test";
+import type { Cipher } from "../types";
 
 const performTest = (
-    cipher: Kalyna,
+    cipher: Cipher,
     iv: Uint8Array,
     aad: Uint8Array,
     msg: Uint8Array,

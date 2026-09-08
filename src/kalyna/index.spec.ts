@@ -1,9 +1,10 @@
 import { test, expect } from "bun:test";
-import { type Kalyna, Kalyna128, Kalyna128_256, Kalyna256, Kalyna256_512, Kalyna512 } from ".";
+import { Kalyna128, Kalyna128_256, Kalyna256, Kalyna256_512, Kalyna512 } from ".";
 import { hexToBytes, type TRet } from "@noble/hashes/utils.js";
 import { IV128, IV128_256, IV256, IV256_512, IV512, KEY128, KEY256, KEY512 } from "../modes/_test_utils.test";
+import type { Cipher } from "../types";
 
-const performTest = (cipher: Kalyna, pt: Uint8Array, ct: Uint8Array) => {
+const performTest = (cipher: Cipher, pt: Uint8Array, ct: Uint8Array) => {
     expect(cipher.encrypt(pt)).toStrictEqual(ct as TRet<Uint8Array>);
     expect(cipher.decrypt(ct)).toStrictEqual(pt as TRet<Uint8Array>);
 }
