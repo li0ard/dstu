@@ -13,14 +13,15 @@ export const ctr = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
 
     return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
-            const keystreamBlocks: Uint8Array[] = [];
-            const ctr = cipher.encrypt(iv);
-            for (let i = 0; i < Math.ceil(msg.length / cipher.blockSize); i++) {
-                incrementCounterAt(ctr, 0);
-                keystreamBlocks.push(cipher.encrypt(ctr));
+            const buf = cipher.encrypt(iv),
+                output = new Uint8Array(msg.length);
+            for (let i = 0; i < msg.length; i += cipher.blockSize) {
+                incrementCounterAt(buf, 0);
+                const ct = xorBytes(cipher.encrypt(buf), msg.subarray(i, i + cipher.blockSize));
+                output.set(ct, i);
             }
 
-            return xorBytes(concatBytes(...keystreamBlocks), msg);
+            return output;
         }
     });
 }

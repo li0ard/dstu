@@ -5,7 +5,7 @@ import { xorBytes } from "../utils.js";
 
 export const cmac = (cipher: Cipher, q = 16): MACMode => Object.freeze({
     compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
-        let data = copyBytes(msg);
+        let data = msg;
         const zeroBlock = new Uint8Array(cipher.blockSize);
         if(data.length % cipher.blockSize !== 0) {
             data = pad(data, cipher.blockSize);

@@ -1,4 +1,4 @@
-import type { TArg, TRet } from "@noble/hashes/utils.js";
+import { copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { BlockMode, Cipher } from "../types.js";
 
 /** Cipher Feedback (CFB) mode */
@@ -8,28 +8,26 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, q: number = cipher.blo
 
     return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
-            let gamma = cipher.encrypt(iv);
-            const feed = new Uint8Array(iv);
-            let offset = 0;
+            const gamma = cipher.encrypt(iv);
+            const feed = copyBytes(iv);
             const result = new Uint8Array(plaintext.length);
-            let dataOff = 0;
 
+            let offset = 0, dataOff = 0;
             while (offset > 0 && dataOff < plaintext.length) {
                 result[dataOff] = plaintext[dataOff] ^ gamma[offset];
                 feed[offset++] = result[dataOff++];
-        
                 if (offset >= cipher.blockSize) {
-                    gamma = cipher.encrypt(feed);
+                    gamma.set(cipher.encrypt(feed));
                     offset = cipher.blockSize - q;
                 }
             }
 
             while (dataOff + q <= plaintext.length) {
-                for (let i = 0; i < q; i++) result[dataOff + i] = plaintext[dataOff + i] ^ gamma[cipher.blockSize - q + i];
+                for (let i = 0; i < q; i++)
+                    result[dataOff + i] = plaintext[dataOff + i] ^ gamma[cipher.blockSize - q + i];
                 feed.set(gamma.subarray(0, cipher.blockSize - q));
                 feed.set(result.subarray(dataOff, dataOff + q), cipher.blockSize - q);
-        
-                gamma = cipher.encrypt(feed);
+                gamma.set(cipher.encrypt(feed));
                 dataOff += q;
             }
 
@@ -42,28 +40,26 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, q: number = cipher.blo
         },
 
         decrypt: (ciphertext: TArg<Uint8Array>): TRet<Uint8Array> => {
-            let gamma = cipher.encrypt(iv);
-            const feed = new Uint8Array(iv);
-            let offset = 0;
+            const gamma = cipher.encrypt(iv);
+            const feed = copyBytes(iv);
             const result = new Uint8Array(ciphertext.length);
-            let dataOff = 0;
 
+            let offset = 0, dataOff = 0;
             while (offset > 0 && dataOff < ciphertext.length) {
                 result[dataOff] = ciphertext[dataOff] ^ gamma[offset];
                 feed[offset++] = ciphertext[dataOff++];
-        
                 if (offset >= cipher.blockSize) {
-                    gamma = cipher.encrypt(feed);
+                    gamma.set(cipher.encrypt(feed));
                     offset = cipher.blockSize - q;
                 }
             }
 
             while (dataOff + q <= ciphertext.length) {
-                for (let i = 0; i < q; i++) result[dataOff + i] = ciphertext[dataOff + i] ^ gamma[cipher.blockSize - q + i];
+                for (let i = 0; i < q; i++)
+                    result[dataOff + i] = ciphertext[dataOff + i] ^ gamma[cipher.blockSize - q + i];
                 feed.set(gamma.subarray(0, cipher.blockSize - q));
                 feed.set(ciphertext.subarray(dataOff, dataOff + q), cipher.blockSize - q);
-        
-                gamma = cipher.encrypt(feed);
+                gamma.set(cipher.encrypt(feed));
                 dataOff += q;
             }
 

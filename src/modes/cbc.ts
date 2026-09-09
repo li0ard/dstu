@@ -9,7 +9,7 @@ export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
     return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
             if (plaintext.length % cipher.blockSize !== 0) throw new Error("Plaintext not aligned");
-            let buf: TArg<Uint8Array> = new Uint8Array(iv);
+            let buf = iv;
 
             const output = new Uint8Array(plaintext.length);
             for(let i = 0; i < plaintext.length; i += cipher.blockSize) {
@@ -22,7 +22,7 @@ export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
         },
         decrypt: (ciphertext: TArg<Uint8Array>): TRet<Uint8Array> => {
             if (ciphertext.length % cipher.blockSize !== 0) throw new Error("Ciphertext not aligned");
-            let buf: TArg<Uint8Array> = new Uint8Array(iv);
+            let buf = iv;
 
             const output = new Uint8Array(ciphertext.length);
             for(let i = 0; i < ciphertext.length; i += cipher.blockSize) {
