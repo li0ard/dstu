@@ -1,5 +1,5 @@
 import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { gf2mMul } from "../utils.js";
+import { assertKalyna, gf2mMul } from "../utils.js";
 import type { Cipher, GMACMode } from "../types.js";
 import { numberToBytesLE } from "@noble/curves/utils.js";
 
@@ -9,10 +9,12 @@ const xorBytesInPlace = (a: TArg<Uint8Array>, b: TArg<Uint8Array>) => {
 }
 /** Galois Message Authentication Code (GMAC) mode */
 export const gmac = (cipher: Cipher, q = 16): GMACMode => {
-    const hblock = cipher.blockSize / 2;
+    assertKalyna(cipher);
+    const hblock = cipher.blockSize >> 1;
 
     return Object.freeze({
-        compute: (aad: TArg<Uint8Array>, msg: TArg<Uint8Array>): TRet<Uint8Array> => {
+        compute: (msg: TArg<Uint8Array>, aad?: TArg<Uint8Array>): TRet<Uint8Array> => {
+            aad ??= new Uint8Array();
             const H = cipher.encrypt(new Uint8Array(cipher.blockSize));
 
             const B = new Uint8Array(cipher.blockSize);

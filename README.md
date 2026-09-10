@@ -26,6 +26,7 @@ npm i @li0ard/dstu
     - Supports KMAC
 - Strumok stream cipher (DSTU 8845:2019)
 - ECIES encryption schema over Twisted Edwards curves (DSTU 9041:2020)
+- DSTU 9311:2024 cipher (republished DSTU GOST 28147:2009)
 
 ## Supported cipher modes
 

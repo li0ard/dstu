@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { ctr } from "./ctr";
 import { hexToBytes, type TRet } from "@noble/hashes/utils.js";
-import { alphabet, IV128, IV128_256, IV256, IV256_512, IV512, kalyna128, kalyna128_256, kalyna256, kalyna256_512, kalyna512 } from "./_test_utils.test";
+import { alphabet, getTestDstu9311, IV128, IV128_256, IV256, IV256_512, IV512, kalyna128, kalyna128_256, kalyna256, kalyna256_512, kalyna512 } from "./_test_utils.test";
 import type { Cipher } from "../types";
 
 const performTest = (
@@ -49,5 +49,14 @@ describe("[MODE] CTR", () => {
         IV512,
         alphabet.subarray(128,224),
         hexToBytes("62460297673D5007C88FD7F14250D80F102475116F3BB113858DEBBE8C50EFF4E2A2BC11B656EFC0BF9D4647BA94B502F8AF4627313CA3AAEACFFC707CA72CD9A95B1CCE08DC4DD4A8EA0765986103C21B7C0DB0FBB602F279B1A00D5E4FFA18")
+    ));
+});
+
+describe("[MODE] CTR (DSTU 9311:2024)", () => {
+    test("#1", () => performTest(
+        getTestDstu9311(hexToBytes("0100000002000000030000000400000005000000060000000700000008000000")),
+        hexToBytes("0300000003000000"),
+        alphabet.subarray(1, 25),
+        hexToBytes("da21005efbea34aa48d17ebf1c4f52a18eca42d3ff4b46f4")
     ));
 });

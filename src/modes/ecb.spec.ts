@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { ecb } from "./ecb";
 import { hexToBytes, type TRet } from "@noble/hashes/utils.js";
-import { IV128, IV128_256, IV256, IV256_512, IV512, kalyna128, kalyna128_256, kalyna256, kalyna256_512, kalyna512 } from "./_test_utils.test";
+import { getTestDstu9311, IV128, IV128_256, IV256, IV256_512, IV512, kalyna128, kalyna128_256, kalyna256, kalyna256_512, kalyna512 } from "./_test_utils.test";
 import type { Cipher } from "../types";
 
 const performTest = (
@@ -43,5 +43,13 @@ describe("[MODE] ECB", () => {
         kalyna512,
         IV512,
         hexToBytes("4A26E31B811C356AA61DD6CA0596231A67BA8354AA47F3A13E1DEEC320EB56B895D0F417175BAB662FD6F134BB15C86CCB906A26856EFEB7C5BC6472940DD9D9")
+    ));
+});
+
+describe("[MODE] ECB (DSTU 9311:2024)", () => {
+    test("#1", () => performTest(
+        getTestDstu9311(hexToBytes("348724a4c1a67667153dde5933884250e3248c657d413b8c1c9ca09a56d968cf")),
+        hexToBytes("34c01533e37d1c56e9431604f57e37a18f90eb0333a33362"),
+        hexToBytes("863e78dd2d60d13ce38f0f691f68f7feb99bb76c3073142d")
     ));
 });

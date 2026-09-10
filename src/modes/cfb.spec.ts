@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { cfb } from "./cfb";
 import { hexToBytes, type TRet } from "@noble/hashes/utils.js";
-import { alphabet, IV128, IV128_256_rev, IV256, IV256_512, IV512, kalyna128, kalyna128_256_rev, kalyna256, kalyna256_512, kalyna512 } from "./_test_utils.test";
+import { alphabet, getTestDstu9311, IV128, IV128_256_rev, IV256, IV256_512, IV512, kalyna128, kalyna128_256_rev, kalyna256, kalyna256_512, kalyna512 } from "./_test_utils.test";
 import type { Cipher } from "../types";
 
 const performTest = (
@@ -56,5 +56,14 @@ describe("[MODE] CFB", () => {
             "7B21D89531DB48007D05DEC928B06766C67D6F3F4C2B82D7A836FAD160905C1C7576243877DC3ADE4AA057966E0023F0" +
             "69"
         )
+    ));
+});
+
+describe("[MODE] CFB (DSTU 9311:2024)", () => {
+    test("#1", () => performTest(
+        getTestDstu9311(hexToBytes("0100000002000000030000000400000005000000060000000700000008000000")),
+        hexToBytes("0300000003000000"),
+        alphabet.subarray(1, 25),
+        hexToBytes("d1ce841aa50de523b0ab76646f0d1ee8ae02aa0c4e8eafb3")
     ));
 });

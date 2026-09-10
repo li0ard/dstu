@@ -1,9 +1,10 @@
 import type { TArg, TRet } from "@noble/hashes/utils.js";
 import type { BlockMode, Cipher } from "../types.js";
-import { xorBytes } from "../utils.js";
+import { assertKalyna, xorBytes } from "../utils.js";
 
 /** Cipher Block Chaining (CBC) mode */
 export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
+    assertKalyna(cipher);
     if (iv.length !== cipher.blockSize) throw new Error("Invalid IV size");
 
     return Object.freeze({

@@ -1,9 +1,10 @@
 import { type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { Cipher, StreamMode } from "../types.js";
-import { xorBytes } from "../utils.js";
+import { assertKalyna, xorBytes } from "../utils.js";
 
 /** Output Feedback (OFB) mode */
 export const ofb = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
+    assertKalyna(cipher);
     if (iv.length !== cipher.blockSize) throw new Error("Invalid IV size");
 
     return Object.freeze({

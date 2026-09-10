@@ -38,7 +38,7 @@ export type MACMode = {
 /** GMAC mode for {@link Cipher} */
 export type GMACMode = {
     /** Compute MAC */
-    compute: (aad: TArg<Uint8Array>, msg: TArg<Uint8Array>) => TRet<Uint8Array>;
+    compute: (msg: TArg<Uint8Array>, aad?: TArg<Uint8Array>) => TRet<Uint8Array>;
 }
 
 /** AEAD mode for {@link Cipher} */

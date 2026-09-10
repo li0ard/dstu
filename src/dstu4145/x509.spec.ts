@@ -3,9 +3,8 @@ import { AsnConvert, AsnIntegerArrayBufferConverter, AsnProp, AsnPropTypes, AsnT
 import { Certificate } from "@peculiar/asn1-x509";
 import { describe, test, expect } from "bun:test";
 import { dstu4145, expandPoint } from ".";
-import { Gost341194 } from "@li0ard/gost/gost341194.js";
 import { Kupyna256, Kupyna384, Kupyna512 } from "../kupyna";
-import { magmaSboxes } from "@li0ard/gost/magma.js";
+import { Gost3431195, DKE_1 } from "../dstu9311";
 
 // ASN.1 schemes from https://zakon.rada.gov.ua/laws/show/z1398-12#Text
 /** Coefficients for pentanomial polynomial */
@@ -159,7 +158,7 @@ const proceedCertificate = (certificate: Uint8Array) => {
     let hash: Hash<any>;
     switch(parsed.signatureAlgorithm.algorithm) {
         case "1.2.804.2.1.1.1.1.3.1.1":
-            hash = new Gost341194(parameters.dke ? new Uint8Array(parameters.dke) : magmaSboxes.DSSZZI_UA_DKE_1);
+            hash = new Gost3431195(parameters.dke ? new Uint8Array(parameters.dke) : DKE_1);
         break;
         case "1.2.804.2.1.1.1.1.3.6.1.1":
             hash = new Kupyna256();
@@ -171,7 +170,7 @@ const proceedCertificate = (certificate: Uint8Array) => {
             hash = new Kupyna512();
         break;
         default:
-            hash = new Gost341194(parameters.dke ? new Uint8Array(parameters.dke) : magmaSboxes.DSSZZI_UA_DKE_1);
+            hash = new Gost3431195(parameters.dke ? new Uint8Array(parameters.dke) : DKE_1);
     }
 
     const digest = hash.update(new Uint8Array(parsed.tbsCertificateRaw!)).digest().reverse();

@@ -1,12 +1,14 @@
 import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { pad, unpad } from "../padding.js";
 import type { Cipher } from "../types.js";
+import { assertKalyna } from "../utils.js";
 
 /** Key wrapping (KW) */
 export const kw = (cipher: Cipher): {
     wrap: (key: TArg<Uint8Array>) => TRet<Uint8Array>,
     unwrap: (wrappedKey: TArg<Uint8Array>) => TRet<Uint8Array>,
 } => {
+    assertKalyna(cipher);
     const half = cipher.blockSize >> 1;
 
     return Object.freeze({

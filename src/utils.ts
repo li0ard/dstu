@@ -1,5 +1,7 @@
 import { bytesToNumberBE, bytesToNumberLE, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
 import { copyBytes } from "@noble/hashes/utils.js";
+import type { Cipher } from "./types.js";
+import { Kalyna } from "./kalyna/index.js";
 
 export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
     const mlen = Math.min(a.length, b.length);
@@ -69,4 +71,9 @@ export const gf2mMul = (blockSize: number, a: TArg<Uint8Array>, b: TArg<Uint8Arr
     }
     
     return result;
+}
+
+export const isKalyna = (cipher: Cipher): cipher is Kalyna => cipher instanceof Kalyna;
+export const assertKalyna = (cipher: Cipher) => {
+    if(!isKalyna(cipher)) throw new Error("Cipher mode only for Kalyna");
 }

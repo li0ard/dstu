@@ -2,6 +2,7 @@
 
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { Kalyna128, Kalyna128_256, Kalyna256, Kalyna256_512, Kalyna512 } from "../kalyna";
+import { Dstu9311, GOSTR_3411_94_TEST_PARAM_SET } from "../dstu9311";
 
 export const alphabet = hexToBytes(
     "000102030405060708090A0B0C0D0E0F" + // 16
@@ -43,3 +44,5 @@ export const kalyna128_256_rev = new Kalyna128_256(KEY256_rev);
 export const kalyna256 = new Kalyna256(KEY256);
 export const kalyna256_512 = new Kalyna256_512(KEY512);
 export const kalyna512 = new Kalyna512(KEY512);
+
+export const getTestDstu9311 = (key: Uint8Array) => new Dstu9311(key, GOSTR_3411_94_TEST_PARAM_SET);

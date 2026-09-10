@@ -25,7 +25,7 @@ export const column = (
     T[7][byte(x[(i - c7 + N) % N] >> 56n)]
 );
 
-abstract class Kalyna implements Cipher {
+export abstract class Kalyna implements Cipher {
     /** Block size */
     readonly blockSize: number;
     /** Key size */

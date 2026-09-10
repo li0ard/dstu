@@ -12,7 +12,7 @@ const performTest = (
     q = 16
 ) => {
     const mode = gmac(cipher, q);
-    expect(mode.compute(aad, msg)).toStrictEqual(mac as TRet<Uint8Array>);
+    expect(mode.compute(msg, aad)).toStrictEqual(mac as TRet<Uint8Array>);
 }
 
 describe("[MODE] GMAC", () => {

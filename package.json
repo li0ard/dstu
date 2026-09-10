@@ -1,6 +1,6 @@
 {
   "name": "@li0ard/dstu",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "module",
@@ -8,6 +8,7 @@
     ".": "./index.js",
     "./dstu4145.js": "./dstu4145/index.js",
     "./dstu9041.js": "./dstu9041/index.js",
+    "./dstu9311.js": "./dstu9311/index.js",
     "./kalyna.js": "./kalyna/index.js",
     "./kupyna.js": "./kupyna/index.js",
     "./modes.js": "./modes/index.js",
@@ -31,7 +32,6 @@
     "docs": "typedoc --options .config/typedoc/config.cjs"
   },
   "devDependencies": {
-    "@li0ard/gost": "^0.2.2",
     "@peculiar/asn1-schema": "^2.8.0",
     "@peculiar/asn1-x509": "^2.8.0",
     "@types/bn.js": "^5.2.0",
