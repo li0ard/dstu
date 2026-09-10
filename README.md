@@ -27,6 +27,7 @@ npm i @li0ard/dstu
 - Strumok stream cipher (DSTU 8845:2019)
 - ECIES encryption schema over Twisted Edwards curves (DSTU 9041:2020)
 - DSTU 9311:2024 cipher (republished DSTU GOST 28147:2009)
+- GOST 34.311-95 hash function over DSTU 9311:2024
 
 ## Supported cipher modes
 
