@@ -28,6 +28,7 @@ npm i @li0ard/dstu
 - ECIES encryption schema over Twisted Edwards curves (DSTU 9041:2020)
 - DSTU 9311:2024 cipher (republished DSTU GOST 28147:2009)
 - GOST 34.311-95 hash function over DSTU 9311:2024
+    - Supports HMAC
 
 ## Supported cipher modes
 
@@ -40,7 +41,7 @@ npm i @li0ard/dstu
 - Message Authentication Code mode (MAC and GMAC)
 - Output Feedback mode (OFB)
 - Key wrapping (KW)
-    - Supports [`Dstu7624Wrap`](https://zakon.rada.gov.ua/laws/show/z0108-13)
+    - Supports [`Dstu7624Wrap`/`GOST28147Wrap`](https://zakon.rada.gov.ua/laws/show/z0108-13)
 - XEX Tweakable Block Ciphertext Stealing (XTS)
 
 ## Supported curves

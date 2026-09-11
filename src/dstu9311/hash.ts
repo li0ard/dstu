@@ -2,6 +2,7 @@ import { concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet }
 import { Dstu9311, DKE_1 } from "../dstu9311/index.js";
 import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/utils.js";
 import { xorBytes } from "../utils.js";
+import { _HMAC } from "@noble/hashes/hmac.js";
 
 const r = (1n << 256n) - 1n;
 const C3 = new Uint8Array([
@@ -70,14 +71,14 @@ const _step = (
     return x;
 }
 
-/** GOST R 34.311-95 hash function */
+/** GOST 34.311-95 hash function */
 export class Gost3431195 implements Hash<Gost3431195> {
     public readonly blockLen = 32;
     public readonly outputLen = 32;
     public readonly canXOF = false;
     private buffer: TArg<Uint8Array>;
 
-    /** GOST R 34.311-95 hash function */
+    /** GOST 34.311-95 hash function */
     constructor(private sbox: TArg<Uint8Array> = DKE_1) { this.buffer = new Uint8Array(); }
 
     /** Create hash instance */
@@ -130,5 +131,14 @@ export class Gost3431195 implements Hash<Gost3431195> {
     }
 }
 
-/** GOST R 34.311-95 hash function */
+/** GOST 34.311-95 hash function */
 export const gost3431195 = createHasher(Gost3431195.create);
+
+/** GOST 34.311-95 HMAC */
+export class Gost3431195HMAC extends _HMAC<Gost3431195> {
+    constructor(key: TArg<Uint8Array>) { super(gost3431195, key); }
+}
+
+/** GOST 34.311-95 HMAC */
+export const gost3431195Hmac = (key: TArg<Uint8Array>, msg: TArg<Uint8Array>): TRet<Uint8Array> =>
+    new Gost3431195HMAC(key).update(msg).digest();
