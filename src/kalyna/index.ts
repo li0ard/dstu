@@ -13,16 +13,18 @@ const swap_block = (k: TArg<BigUint64Array>, N: number) => {
 export const column = (
     x: TArg<BigUint64Array>, i: number, N: number,
     c1: number, c2: number, c3: number,
-    c4: number, c5: number, c6: number, c7: number
+    c4: number, c5: number, c6: number, c7: number,
+    table: Readonly<TArg<BigUint64Array>[]> = T,
+    sign: 1 | -1 = -1
 ): bigint => (
-    T[0][byte(x[(i + N) % N])] ^ // c0 - always 0 for both Kalyna and Kupyna
-    T[1][byte(x[(i - c1 + N) % N] >> 8n)] ^
-    T[2][byte(x[(i - c2 + N) % N] >> 16n)] ^
-    T[3][byte(x[(i - c3 + N) % N] >> 24n)] ^
-    T[4][byte(x[(i - c4 + N) % N] >> 32n)] ^
-    T[5][byte(x[(i - c5 + N) % N] >> 40n)] ^
-    T[6][byte(x[(i - c6 + N) % N] >> 48n)] ^
-    T[7][byte(x[(i - c7 + N) % N] >> 56n)]
+    table[0][byte(x[(i + N) % N])] ^
+    table[1][byte(x[(i + sign * c1 + N) % N] >> 8n)] ^
+    table[2][byte(x[(i + sign * c2 + N) % N] >> 16n)] ^
+    table[3][byte(x[(i + sign * c3 + N) % N] >> 24n)] ^
+    table[4][byte(x[(i + sign * c4 + N) % N] >> 32n)] ^
+    table[5][byte(x[(i + sign * c5 + N) % N] >> 40n)] ^
+    table[6][byte(x[(i + sign * c6 + N) % N] >> 48n)] ^
+    table[7][byte(x[(i + sign * c7 + N) % N] >> 56n)]
 );
 
 export abstract class Kalyna implements Cipher {
@@ -63,7 +65,7 @@ export abstract class Kalyna implements Cipher {
 
         const keys = bytesToUint64sLE(key);
         let k = new BigUint64Array(isDoubleKey ? this.N * 2 : this.N);
-        const _0 = new BigUint64Array(this.N)
+        const _0 = new BigUint64Array(this.N);
 
         if (isDoubleKey) {
             const ka = keys.subarray(0, this.N);
@@ -97,10 +99,7 @@ export abstract class Kalyna implements Cipher {
             this.G(t2, t1, ksc);
             this.GL(t1, rk.subarray(offset), ksc);
         
-            if (i < R - 1) this.makeOddKey(
-                rk.subarray(offset),
-                rk.subarray(offset + this.N)
-            );
+            if (i < R - 1) this.makeOddKey(rk.subarray(offset), rk.subarray(offset + this.N));
             constant <<= 1n;
         }
 
@@ -136,6 +135,15 @@ export abstract class Kalyna implements Cipher {
         );
     }
 
+    private invColumn(x: TArg<BigUint64Array>, i: number): bigint {
+        return column(
+            x, i, this.N,
+            this.wordOffsets[1], this.wordOffsets[2], this.wordOffsets[3],
+            this.wordOffsets[4], this.wordOffsets[5], this.wordOffsets[6], this.wordOffsets[7],
+            IT, 1
+        );
+    }
+
     private G(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, k: TArg<BigUint64Array>) {
         for (let i = 0; i < this.N; i++) y[i] = k[i] ^ this.column(x, i);
     }
@@ -156,29 +164,21 @@ export abstract class Kalyna implements Cipher {
     }
 
     private IG(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, k: TArg<BigUint64Array>) {
-        for (let i = 0; i < this.N; i++) y[i] = k[i] ^
-            IT[0][byte(x[(i + this.wordOffsets[0]) % this.N])] ^
-            IT[1][byte(x[(i + this.wordOffsets[1]) % this.N] >> 8n)] ^
-            IT[2][byte(x[(i + this.wordOffsets[2]) % this.N] >> 16n)] ^
-            IT[3][byte(x[(i + this.wordOffsets[3]) % this.N] >> 24n)] ^
-            IT[4][byte(x[(i + this.wordOffsets[4]) % this.N] >> 32n)] ^
-            IT[5][byte(x[(i + this.wordOffsets[5]) % this.N] >> 40n)] ^
-            IT[6][byte(x[(i + this.wordOffsets[6]) % this.N] >> 48n)] ^
-            IT[7][byte(x[(i + this.wordOffsets[7]) % this.N] >> 56n)];
+        for (let i = 0; i < this.N; i++) y[i] = k[i] ^ this.invColumn(x, i);
     }
 
-    private IGL(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, k: TArg<BigUint64Array>) {
+    private IGL(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>) {
         for (let i = 0; i < this.N; i++) {
-            let result = BigInt(IS[0][byte(x[(i + this.wordOffsets[0]) % this.N])]);
-            result ^= BigInt(IS[1][byte(x[(i + this.wordOffsets[1]) % this.N] >> 8n)]) << 8n;
-            result ^= BigInt(IS[2][byte(x[(i + this.wordOffsets[2]) % this.N] >> 16n)]) << 16n;
-            result ^= BigInt(IS[3][byte(x[(i + this.wordOffsets[3]) % this.N] >> 24n)]) << 24n;
-            result ^= BigInt(IS[0][byte(x[(i + this.wordOffsets[4]) % this.N] >> 32n)]) << 32n;
-            result ^= BigInt(IS[1][byte(x[(i + this.wordOffsets[5]) % this.N] >> 40n)]) << 40n;
-            result ^= BigInt(IS[2][byte(x[(i + this.wordOffsets[6]) % this.N] >> 48n)]) << 48n;
-            result ^= BigInt(IS[3][byte(x[(i + this.wordOffsets[7]) % this.N] >> 56n)]) << 56n;
+            const result = BigInt(IS[0][byte(x[i % this.N])]) ^
+                (BigInt(IS[1][byte(x[(i + this.wordOffsets[1]) % this.N] >> 8n)]) << 8n) ^
+                (BigInt(IS[2][byte(x[(i + this.wordOffsets[2]) % this.N] >> 16n)]) << 16n) ^
+                (BigInt(IS[3][byte(x[(i + this.wordOffsets[3]) % this.N] >> 24n)]) << 24n) ^
+                (BigInt(IS[0][byte(x[(i + this.wordOffsets[4]) % this.N] >> 32n)]) << 32n) ^
+                (BigInt(IS[1][byte(x[(i + this.wordOffsets[5]) % this.N] >> 40n)]) << 40n) ^
+                (BigInt(IS[2][byte(x[(i + this.wordOffsets[6]) % this.N] >> 48n)]) << 48n) ^
+                (BigInt(IS[3][byte(x[(i + this.wordOffsets[7]) % this.N] >> 56n)]) << 56n);
 
-            y[i] = result - k[i];
+            y[i] = result - this.drk[i];
         }
     }
 
@@ -213,7 +213,7 @@ export abstract class Kalyna implements Cipher {
             else this.IG(t2, t1, roundKey);
         }
 
-        this.IGL(t2, t1, this.drk);
+        this.IGL(t2, t1);
         return uint64sToBytesLE(t1);
     }
 }

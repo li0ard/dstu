@@ -1,4 +1,5 @@
 export * from "./cbc.js";
+export * from "./ccm.js";
 export * from "./cfb.js";
 export * from "./cmac.js";
 export * from "./ctr.js";

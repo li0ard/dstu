@@ -10,7 +10,7 @@ const performTest = (
     aad: Uint8Array,
     msg: Uint8Array,
     ct: Uint8Array,
-    q = 16
+    q?: number
 ) => {
     const mode = gcm(cipher, iv, q);
     expect(mode.seal(msg, aad)).toStrictEqual(ct as TRet<Uint8Array>);
