@@ -1,5 +1,4 @@
-import { bytesToNumberBE, bytesToNumberLE, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
-import { copyBytes } from "@noble/hashes/utils.js";
+import { copyBytes, bytesToNumberBE, bytesToNumberLE, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
 import type { Cipher } from "./types.js";
 import { Kalyna } from "./kalyna/index.js";
 

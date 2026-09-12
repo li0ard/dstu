@@ -4,5 +4,8 @@
     // List of extensions which should be recommended for users of this workspace.
     "recommendations": [
         "oven.bun-vscode"
+    ],
+    "unwantedRecommendations": [
+        "svelte.svelte-vscode"
     ]
 }

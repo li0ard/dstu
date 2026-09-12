@@ -1,7 +1,6 @@
 import type { EdwardsOpts } from "@noble/curves/abstract/edwards.js";
 import { Field, mod } from "@noble/curves/abstract/modular.js";
-import { bitGet, bitLen, bytesToNumberBE, randomBytes, type TArg, type TRet } from "@noble/curves/utils.js";
-import { concatBytes } from "@noble/hashes/utils.js";
+import { concatBytes, bitGet, bitLen, bytesToNumberBE, randomBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 
 export const dstu9041Curve = (parameters: EdwardsOpts) => {
     if(parameters.a != 2n) throw new Error("Unsuppored `a` parameter, must be 2");

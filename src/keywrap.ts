@@ -1,7 +1,6 @@
-import { concatBytes, randomBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { equalBytes, concatBytes, randomBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import { Kalyna256 } from "./kalyna/index.js";
 import { cfb, cmac } from "./modes/index.js";
-import { equalBytes } from "@noble/curves/utils.js";
 import { Dstu9311 } from "./dstu9311/index.js";
 
 const IV1_KALYNA = new Uint8Array([

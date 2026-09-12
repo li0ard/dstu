@@ -1,8 +1,7 @@
-import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { equalBytes, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import { ctr } from "./ctr.js";
 import { gmac } from "./gmac.js";
 import type { AEADMode, Cipher } from "../types.js";
-import { equalBytes } from "@noble/curves/utils.js";
 import { assertKalyna } from "../utils.js";
 
 /** Galois counter (GCM) mode (AEAD) */

@@ -1,7 +1,6 @@
-import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { numberToBytesLE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import { assertKalyna, gf2mMul } from "../utils.js";
 import type { Cipher, GMACMode } from "../types.js";
-import { numberToBytesLE } from "@noble/curves/utils.js";
 
 const xorBytesInPlace = (a: TArg<Uint8Array>, b: TArg<Uint8Array>) => {
     if(a.length != b.length) throw new Error("Byte arrays must have same length");
