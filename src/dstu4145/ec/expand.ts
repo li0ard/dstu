@@ -1,12 +1,13 @@
 import type { DSTUShortParameters } from "../const.js";
 import { init_onb_parameters } from "./onb.js";
 import { createField } from "./math.js";
+import type { TArg, TRet } from "@noble/hashes/utils.js";
 
 /** Uncompress point without creating full API curve */
 export const expandPoint = (
-    xBytes: Uint8Array,
+    xBytes: TArg<Uint8Array>,
     params: DSTUShortParameters
-): { x: Uint8Array; y: Uint8Array } => {
+): { x: TRet<Uint8Array>; y: TRet<Uint8Array> } => {
     const { m, ks, a, onb } = params;
     const field = createField(m, ks);
     let converter;

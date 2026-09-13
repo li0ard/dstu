@@ -109,7 +109,7 @@ export class DSTU4145Params {
     @AsnProp({ type: DSTU4145ParamsCurve })
     curve!: DSTU4145ParamsCurve;
 
-    /** S-Box (DKE) for DSTU GOST 28147-89 */
+    /** S-Box (DKE) for DSTU GOST 28147:2009 */
     @AsnProp({ type: AsnPropTypes.OctetString, optional: true })
     dke?: ArrayBuffer;
 
