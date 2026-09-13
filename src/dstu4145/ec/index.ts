@@ -2,8 +2,7 @@ import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { DSTUParameters } from "../const.js";
 import BN from "bn.js";
 import { bitLength, getWindowSize, windowNaf } from "./wnaf.js";
-import { init_onb_parameters } from "./onb.js";
-import { createField } from "./math.js";
+import { createField, init_onb_parameters } from "../gf2m/index.js";
 
 export const binaryWeierstrass = (parameters: DSTUParameters) => {
     const field = createField(parameters.m, parameters.ks);

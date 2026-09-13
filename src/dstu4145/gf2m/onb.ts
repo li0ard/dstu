@@ -1,7 +1,7 @@
 import BN from "bn.js";
 import type { DSTUShortParameters } from "../const.js";
 import { hexToBytes } from "@noble/hashes/utils.js";
-import { createField } from "./math.js";
+import { createField } from "./index.js";
 
 const decompress_matrix = (compress_mulp: BN, mulp: Uint16Array) => {
     const mlen = Math.ceil(compress_mulp.bitLength() / 9);

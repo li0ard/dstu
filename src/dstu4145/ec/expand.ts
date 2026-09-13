@@ -1,6 +1,5 @@
 import type { DSTUShortParameters } from "../const.js";
-import { init_onb_parameters } from "./onb.js";
-import { createField } from "./math.js";
+import { createField, init_onb_parameters } from "../gf2m/index.js";
 import type { TArg, TRet } from "@noble/hashes/utils.js";
 
 /** Uncompress point without creating full API curve */
