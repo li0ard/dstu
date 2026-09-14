@@ -38,7 +38,10 @@ export const SQR_PRECOMP = new Uint16Array([
 
 export const WORD_BITS = 32;
 
-export const bn2LE = (x: BN, numWords: number): TRet<Uint32Array> => {
+const numWordsFor = (x: BN): number => 
+    Math.max(1, Math.ceil(Math.max(x.bitLength(), 1) / WORD_BITS));
+
+export const bn2LE = (x: BN, numWords: number = numWordsFor(x)): TRet<Uint32Array> => {
     const arr = new Uint32Array(numWords);
     const bytes = x.toArray("le");
     for(let i = 0; i < bytes.length; i++) arr[i >> 2] |= bytes[i] << ((i & 3) * 8);
@@ -58,8 +61,9 @@ export const le2BN = (arr: TArg<Uint32Array>): BN => {
     return new BN(bytes, "le");
 }
 
-export const be2LEw = (bytes: TArg<Uint8Array>, numWords: number): TRet<Uint32Array> => {
-    const arr = new Uint32Array(numWords), n = bytes.length;
+export const be2LEw = (bytes: TArg<Uint8Array>): TRet<Uint32Array> => {
+    const n = bytes.length,
+        arr = new Uint32Array(Math.max(1, Math.ceil(n / 4)));
     for(let i = 0; i < n; i++) {
         const b = bytes[n - 1 - i];
         arr[i >> 2] |= b << ((i & 3) * 8);
@@ -83,7 +87,7 @@ const wBitLen = (words: TArg<Uint32Array>): number => {
     return r + nz * WORD_BITS;
 }
 
-const mul_1x1 = (dst: TArg<Uint32Array>, offset: number, a: number, b: number) => {
+const mul_1x1 = (offset: number, a: number, b: number, dst: TArg<Uint32Array>) => {
     const a1 = a & 0x3fffffff,
         a2 = a1 << 1,
         a4 = a2 << 1,
@@ -138,16 +142,16 @@ const mul_1x1 = (dst: TArg<Uint32Array>, offset: number, a: number, b: number) =
 const mul_2x2 = (
     a1: number, a0: number,
     b1: number, b0: number,
-    ret: TArg<Uint32Array>
+    dst: TArg<Uint32Array>
 ) => {
-    mul_1x1(ret, 2, a1, b1);
-    mul_1x1(ret, 0, a0, b0);
-    mul_1x1(ret, 4, a0 ^ a1, b0 ^ b1);
+    mul_1x1(2, a1, b1, dst);
+    mul_1x1(0, a0, b0, dst);
+    mul_1x1(4, a0 ^ a1, b0 ^ b1, dst);
 
-    ret[2] ^= ret[5] ^ ret[1] ^ ret[3];
-    ret[1] = ret[3] ^ ret[2] ^ ret[0] ^ ret[4] ^ ret[5];
-    ret[4] = 0;
-    ret[5] = 0;
+    dst[2] ^= dst[5] ^ dst[1] ^ dst[3];
+    dst[1] = dst[3] ^ dst[2] ^ dst[0] ^ dst[4] ^ dst[5];
+    dst[4] = 0;
+    dst[5] = 0;
 }
 
 export const mulWords = (a: TArg<Uint32Array>, b: TArg<Uint32Array>): TRet<Uint32Array> => {
@@ -178,65 +182,62 @@ export const mulWords = (a: TArg<Uint32Array>, b: TArg<Uint32Array>): TRet<Uint3
 export const modWords = (a: TArg<Uint32Array>, poly: TArg<Int32Array>): TRet<Uint32Array> => {
     const dN = Math.floor(poly[0] / WORD_BITS),
         len = Math.max(a.length, dN + 1),
-        ret = new Uint32Array(len);
-    ret.set(a);
+        res = new Uint32Array(len);
+    res.set(a);
 
     let j = len - 1;
     while(j > dN) {
-        const zz = ret[j];
+        const zz = res[j];
         if(zz === 0) {
             j--;
             continue;
         }
-        ret[j] = 0;
+        res[j] = 0;
 
         for(let k = 1; poly[k]; k++) {
             let n = poly[0] - poly[k];
             const d0 = n % WORD_BITS;
             n = Math.floor(n / WORD_BITS);
-            ret[j - n] ^= zz >>> d0;
-            if(d0) ret[j - n - 1] ^= zz << (WORD_BITS - d0);
+            res[j - n] ^= zz >>> d0;
+            if(d0) res[j - n - 1] ^= zz << (WORD_BITS - d0);
         }
 
         const d0m = poly[0] % WORD_BITS;
-        ret[j - dN] ^= zz >>> d0m;
-        if(d0m) ret[j - dN - 1] ^= zz << (WORD_BITS - d0m);
+        res[j - dN] ^= zz >>> d0m;
+        if(d0m) res[j - dN - 1] ^= zz << (WORD_BITS - d0m);
     }
 
     while(j === dN) {
-        const d0 = poly[0] % WORD_BITS, zz = ret[dN] >>> d0;
+        const d0 = poly[0] % WORD_BITS, zz = res[dN] >>> d0;
         if(zz === 0) break;
         const d1 = WORD_BITS - d0;
 
-        ret[dN] = d0 ? (ret[dN] << d1) >>> d1 : 0;
-        ret[0] ^= zz;
+        res[dN] = d0 ? (res[dN] << d1) >>> d1 : 0;
+        res[0] ^= zz;
 
         for(let k = 1; poly[k]; k++) {
             const n = Math.floor(poly[k] / WORD_BITS),
                 dd0 = poly[k] % WORD_BITS,
                 dd1 = WORD_BITS - dd0;
-            ret[n] ^= zz << dd0;
+            res[n] ^= zz << dd0;
             const carry = zz >>> dd1;
-            if(dd0 && carry) ret[n + 1] ^= carry;
+            if(dd0 && carry) res[n + 1] ^= carry;
         }
     }
 
-    return ret;
+    return res;
 }
 
-export const invertWords = (
-    aWords: TArg<Uint32Array>,
-    polyWords: TArg<Uint32Array>,
-    len: number
-): TRet<Uint32Array> => {
+export const invWords = (a: TArg<Uint32Array>, poly: TArg<Uint32Array>): TRet<Uint32Array> => {
+    const len = a.length;
     let uu = new Uint32Array(len),
         vv = new Uint32Array(len),
         bb = new Uint32Array(len),
         cc = new Uint32Array(len);
 
     bb[0] = 1;
-    uu.set(aWords);
-    vv.set(polyWords);
+    uu.set(a);
+    vv.set(poly);
 
     let ubits = wBitLen(uu), vbits = wBitLen(vv);
     if(ubits === 0) throw new Error("Element is 0, there's no inverse");
@@ -248,7 +249,7 @@ export const invertWords = (
         while(ubits && !(uu[0] & 1)) {
             let u0 = uu[0], b0 = bb[0];
             const mask = (b0 & 1) ? 0xffffffff : 0;
-            b0 ^= polyWords[0] & mask;
+            b0 ^= poly[0] & mask;
 
             let idx = 0;
             for(; idx < len - 1; idx++) {
@@ -256,7 +257,7 @@ export const invertWords = (
                 uu[idx] = (u0 >>> 1) | (u1 << 31);
                 u0 = u1;
 
-                const b1 = bb[idx + 1] ^ (polyWords[idx + 1] & mask);
+                const b1 = bb[idx + 1] ^ (poly[idx + 1] & mask);
                 bb[idx] = (b0 >>> 1) | (b1 << 31);
                 b0 = b1;
             }

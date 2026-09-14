@@ -1,9 +1,6 @@
 import type { TArg, TRet } from "@noble/hashes/utils.js";
 import BN from "bn.js";
-import { be2LEw, bn2LE, invertWords, le2BN, modWords, mulWords, SQR_PRECOMP, WORD_BITS } from "./utils.js";
-
-const numWordsFor = (x: BN): number => 
-    Math.max(1, Math.ceil(Math.max(x.bitLength(), 1) / WORD_BITS));
+import { be2LEw, bn2LE, invWords, le2BN, modWords, mulWords, SQR_PRECOMP, WORD_BITS } from "./utils.js";
 
 /** Compute curve modulo */
 export const computeMod = (m: number, ks: number[]): BN => {
@@ -23,20 +20,19 @@ export const createField = (m: number, ks: number[]) => {
     const polyBits = Int32Array.from([m, ...[...ks].sort((a, b) => b - a), 0]),
         polyWordsForInv = bn2LE(modulo, wordsForModWord);
 
+    const modw = (a: TArg<Uint32Array>): BN =>
+        le2BN(modWords(a, polyBits).subarray(0, wordsPerElement));
+
     const mod = (f: BN): BN => {
-        if(f.bitLength() <= m) return f.clone();
-        const words = bn2LE(f, Math.ceil(f.bitLength() / WORD_BITS));
+        const bl = f.bitLength();
+        if(bl <= m) return f.clone();
 
-        return le2BN(modWords(words, polyBits).subarray(0, wordsPerElement));
+        return modw(bn2LE(f, Math.ceil(bl / WORD_BITS)));
     }
 
-    const mul = (x: BN, v: BN): BN => {
-        if(x.eq(v)) return sqr(x);
-        const xw = bn2LE(x, numWordsFor(x)),
-            vw = bn2LE(v, numWordsFor(v));
-
-        return le2BN(modWords(mulWords(xw, vw), polyBits).subarray(0, wordsPerElement));
-    }
+    const mul = (x: BN, v: BN): BN => x.eq(v)
+        ? sqr(x)
+        : modw(mulWords(bn2LE(x), bn2LE(v)));
 
     const div = (x: BN, v: BN): BN => mul(x, invert(v));
 
@@ -49,8 +45,7 @@ export const createField = (m: number, ks: number[]) => {
             out[2 * i + 1] = v & 0xff;
         }
 
-        const words = be2LEw(out, Math.max(1, Math.ceil(out.length / 4)));
-        return le2BN(modWords(words, polyBits).subarray(0, wordsPerElement));
+        return modw(be2LEw(out));
     }
 
     const testBit = (x: BN, i: number): 0 | 1 => x.testn(i) ? 1 : 0;
@@ -81,11 +76,11 @@ export const createField = (m: number, ks: number[]) => {
     }
 
     const invert = (f: BN): BN => {
-        const reducedWords = modWords(bn2LE(f, numWordsFor(f)), polyBits),
-            aWords = new Uint32Array(wordsForModWord);
-        aWords.set(reducedWords.subarray(0, Math.min(reducedWords.length, wordsForModWord)));
+        const reducedWords = modWords(bn2LE(f), polyBits),
+            words = new Uint32Array(wordsForModWord);
+        words.set(reducedWords.subarray(0, Math.min(reducedWords.length, wordsForModWord)));
 
-        return le2BN(invertWords(aWords, polyWordsForInv, wordsForModWord).subarray(0, wordsPerElement));
+        return le2BN(invWords(words, polyWordsForInv).subarray(0, wordsPerElement));
     }
 
     const solve_quad = (v: BN): BN => {
