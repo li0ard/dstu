@@ -66,7 +66,7 @@ describe("[CORE] DSTU 4145-2002 (ONB)", () => {
     }, 10000);
 });
 
-test.skipIf(process.env.SKIP_ALL == "1")("[CORE] DSTU 4145-2002 (random keypair)", () => {
+test.skipIf(process.env.SKIP_LONG == "1")("[CORE] DSTU 4145-2002 (random keypair)", () => {
     const digest = randomBytes(32);
 
     for(const signer of [dstu163_test, dstu173_onb_test, dstu257, dstu431]) {

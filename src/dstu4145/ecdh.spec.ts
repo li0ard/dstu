@@ -10,12 +10,12 @@ const performTest = (signer: ReturnType<typeof dstu4145>) => {
     expect(sharedA).toStrictEqual(sharedB);
 }
 
-const dstu233_onb = dstu4145(DSTU_233_ONB);
 describe("[ECDH] DSTU 4145-2002 (PB)", () => {
     test("#1 (m=257)", () => performTest(dstu257));
     test("#2 (m=431)", () => performTest(dstu431));
 });
 
-describe("[ECDH] DSTU 4145-2002 (ONB)", () => {
+describe.skipIf(process.env.SKIP_LONG == "1")("[ECDH] DSTU 4145-2002 (ONB)", () => {
+    const dstu233_onb = dstu4145(DSTU_233_ONB);
     test("#1 (m=233)", () => performTest(dstu233_onb));
 });
