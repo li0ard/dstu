@@ -23,16 +23,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
     const randomPrivateKey = (): TRet<Uint8Array> => Field.toBytes(
         new BN(randomBytes(lengths.scalarByteLength)).imaskn(MASK),
         lengths.scalarByteLength
-    );
-
-    // (k + n) * G = k * G + O = k * G
-    const padScalar = (k: BN) => {
-        const padded = k.add(curve.ORDER);
-        if (padded.bitLength() === curve.ORDER.bitLength())
-            padded.iadd(curve.ORDER);
-
-        return padded;
-    }
+    )
 
     /**
      * Computes presign (ephermeral keypair)
@@ -43,7 +34,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         const e = new BN(rand ?? randomBytes(lengths.scalarByteLength)).imaskn(MASK);
         if(rand && e.isZero()) throw new Error("Invalid custom rand for presign (rand = 0)");
         else if(e.isZero()) return computePresign(rand);
-        const Fe = Point.BASE.mul(padScalar(e)).x;
+        const Fe = Point.BASE.mul(e).x;
         if(Fe.isZero()) return computePresign(rand);
 
         return { Fe, e }
