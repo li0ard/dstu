@@ -2,7 +2,7 @@ import { bytesToHex, type Hash, type TArg } from "@noble/hashes/utils.js";
 import { AsnConvert, AsnIntegerArrayBufferConverter, AsnProp, AsnPropTypes, AsnType, AsnTypeTypes, OctetString } from "@peculiar/asn1-schema";
 import { Certificate } from "@peculiar/asn1-x509";
 import { describe, test, expect } from "bun:test";
-import { dstu4145, expandPoint } from ".";
+import { dstu4145_le, expandPoint } from ".";
 import { Kupyna256, Kupyna384, Kupyna512 } from "../kupyna";
 import { Gost3431195, DKE_1 } from "../dstu9311";
 
@@ -134,7 +134,7 @@ const createSignerFromParameters = (params: ECBinary) => {
         { m, ks, a, b }
     );
 
-    return dstu4145({
+    return dstu4145_le({
         m, ks, a, b, order,
         cofactor: 4 >> a as 2 | 4,
         Gx: bytesToHex(G.x),
@@ -153,7 +153,7 @@ const proceedCertificate = (certificate: Uint8Array) => {
     const parameters = AsnConvert.parse(spki.algorithm.parameters!, DSTU4145Params);
     if(!parameters.curve.ecbinary) throw new Error("Missing curve definition");
     const signer = createSignerFromParameters(parameters.curve.ecbinary);
-    const spk = convertOctetStringToBytes(spki.subjectPublicKey).reverse();
+    const spk = convertOctetStringToBytes(spki.subjectPublicKey);
 
     let hash: Hash<any>;
     switch(parsed.signatureAlgorithm.algorithm) {
@@ -173,8 +173,8 @@ const proceedCertificate = (certificate: Uint8Array) => {
             hash = new Gost3431195(parameters.dke ? new Uint8Array(parameters.dke) : DKE_1);
     }
 
-    const digest = hash.update(new Uint8Array(parsed.tbsCertificateRaw!)).digest().reverse();
-    const signature = convertOctetStringToBytes(parsed.signatureValue).reverse();
+    const digest = hash.update(new Uint8Array(parsed.tbsCertificateRaw!)).digest();
+    const signature = convertOctetStringToBytes(parsed.signatureValue);
 
     expect(signer.verify(spk, digest, signature)).toBeTrue();
 }

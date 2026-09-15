@@ -6,6 +6,7 @@ import {
 } from "./const.js";
 import { binaryWeierstrass } from "./ec/index.js";
 import BN from "bn.js";
+import { reverseBytes } from "../utils.js";
 
 /** Create DSTU 4145-2002 signer (Big-Endian) */
 export const dstu4145 = (parameters: DSTUParameters) => {
@@ -76,7 +77,8 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         digest: TArg<Uint8Array>,
         signature: TArg<Uint8Array>
     ): boolean => {
-        if(signature.length != lengths.signatureByteLength) throw new Error("Invalid signature length");
+        if(signature.length != lengths.signatureByteLength)
+            throw new Error("Invalid signature length");
         const Q = Point.fromBytes(publicKey);
         const s = Field.fromHexStringOrBytes(signature.subarray(0, lengths.scalarByteLength)),
             r = Field.fromHexStringOrBytes(signature.subarray(lengths.scalarByteLength));
@@ -128,6 +130,65 @@ export const dstu4145 = (parameters: DSTUParameters) => {
     });
 }
 
+/** 
+ * Create DSTU 4145-2002 signer (Little-Endian)
+ * 
+ * **NOTE:** Parameters MUST be in Big-Endian
+ */
+export const dstu4145_le = (parameters: DSTUParameters) => {
+    const signer = dstu4145(parameters);
+
+    const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> => reverseBytes(
+        signer.getPublicKey(reverseBytes(secretKey), isCompressed)
+    );
+
+    const sign = (
+        secretKey: TArg<Uint8Array>,
+        digest: TArg<Uint8Array>,
+        rand?: TArg<Uint8Array>
+    ): TRet<Uint8Array> => reverseBytes(signer.sign(
+        reverseBytes(secretKey),
+        reverseBytes(digest),
+        rand ? reverseBytes(rand) : undefined
+    ));
+
+    const verify = (
+        publicKey: TArg<Uint8Array>,
+        digest: TArg<Uint8Array>,
+        signature: TArg<Uint8Array>
+    ): boolean => signer.verify(
+        reverseBytes(publicKey),
+        reverseBytes(digest),
+        reverseBytes(signature)
+    );
+
+    const getSharedSecret = (
+        secretKeyA: TArg<Uint8Array>,
+        publicKeyB: TArg<Uint8Array>,
+        withCofactor = true
+    ): TRet<Uint8Array> => reverseBytes(signer.getSharedSecret(
+        reverseBytes(secretKeyA), reverseBytes(publicKeyB), withCofactor
+    ));
+
+    const keygen = (isCompressed = false): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
+        const { secretKey, publicKey } = signer.keygen(isCompressed);
+
+        return {
+            secretKey: reverseBytes(secretKey),
+            publicKey: reverseBytes(publicKey)
+        }
+    }
+
+    return Object.freeze({
+        getPublicKey,
+        getSharedSecret,
+        sign,
+        verify,
+        keygen,
+        lengths: signer.lengths
+    });
+}
+
 export * from "./const.js";
 export * from "./ec/expand.js";
 
@@ -148,9 +209,13 @@ export const dstu191 = dstu4145(DSTU_191);
 export const dstu233 = dstu4145(DSTU_233);
 /** DSTU 4145-2002 257 bit curve */
 export const dstu257 = dstu4145(DSTU_257);
+/** DSTU 4145-2002 257 bit curve (LE) */
+export const dstu257_le = dstu4145_le(DSTU_257);
 /** DSTU 4145-2002 307 bit curve */
 export const dstu307 = dstu4145(DSTU_307);
 /** DSTU 4145-2002 367 bit curve */
 export const dstu367 = dstu4145(DSTU_367);
 /** DSTU 4145-2002 431 bit curve */
 export const dstu431 = dstu4145(DSTU_431);
+/** DSTU 4145-2002 431 bit curve (LE) */
+export const dstu431_le = dstu4145_le(DSTU_431);

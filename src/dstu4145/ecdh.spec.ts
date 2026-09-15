@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { dstu257, dstu4145, dstu431, DSTU_233_ONB } from ".";
+import { dstu257, dstu257_le, dstu4145, dstu4145_le, dstu431, dstu431_le, DSTU_233_ONB } from ".";
 
 const performTest = (signer: ReturnType<typeof dstu4145>) => {
     const a = signer.keygen();
@@ -13,9 +13,11 @@ const performTest = (signer: ReturnType<typeof dstu4145>) => {
 describe("[ECDH] DSTU 4145-2002 (PB)", () => {
     test("#1 (m=257)", () => performTest(dstu257));
     test("#2 (m=431)", () => performTest(dstu431));
+    test("#3 (m=257, le)", () => performTest(dstu257_le));
+    test("#4 (m=431, le)", () => performTest(dstu431_le));
 });
 
 describe.skipIf(process.env.SKIP_LONG == "1")("[ECDH] DSTU 4145-2002 (ONB)", () => {
-    const dstu233_onb = dstu4145(DSTU_233_ONB);
-    test("#1 (m=233)", () => performTest(dstu233_onb));
+    test("#1 (m=233)", () => performTest(dstu4145(DSTU_233_ONB)));
+    test("#2 (m=233, le)", () => performTest(dstu4145_le(DSTU_233_ONB)));
 });

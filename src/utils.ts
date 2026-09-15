@@ -76,3 +76,5 @@ export const isKalyna = (cipher: Cipher): cipher is Kalyna => cipher instanceof 
 export const assertKalyna = (cipher: Cipher) => {
     if(!isKalyna(cipher)) throw new Error("Cipher mode only for Kalyna");
 }
+
+export const reverseBytes = (bytes: TArg<Uint8Array>): TRet<Uint8Array> => copyBytes(bytes).reverse();
