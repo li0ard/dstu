@@ -11,7 +11,7 @@ export const ccm = (cipher: Cipher, iv: TArg<Uint8Array>, q = 16, Nb = 4): AEADM
     if (cipher.blockSize < Nb + 1) throw new Error('Cipher block size must be >= Nb + 1');
     const tmp = cipher.blockSize - 1, tmp2 = tmp - Nb;
 
-    const calculateMac = (msg: TArg<Uint8Array>, aad?: TArg<Uint8Array>) => {
+    const calculateMac = (msg: TArg<Uint8Array>, aad?: TArg<Uint8Array>): TRet<Uint8Array> => {
         aad ??= new Uint8Array();
         const G1 = new Uint8Array(cipher.blockSize),
             G2 = new Uint8Array(cipher.blockSize),

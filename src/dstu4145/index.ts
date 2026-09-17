@@ -7,30 +7,17 @@ import {
 import { binaryWeierstrass } from "./ec/index.js";
 import BN from "bn.js";
 import { reverseBytes } from "../utils.js";
+import type { ECDSA } from "../types.js";
 
 /** Create DSTU 4145-2002 signer (Big-Endian) */
-export const dstu4145 = (parameters: DSTUParameters) => {
+export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
     const curve = binaryWeierstrass(parameters);
     const { Field, Point, MASK, lengths } = curve;
 
-    /**
-     * Computes public key for a secret key
-     * @param isCompressed - whether to return compact (default), or full key
-     * @returns Public key, full when `isCompressed=false`; short when `isCompressed=true`
-     */
     const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> =>
         Point.BASE.mul(Field.fromHexStringOrBytes(secretKey)).negate().toBytes(isCompressed);
 
-    const randomPrivateKey = (): TRet<Uint8Array> => Field.toBytes(
-        new BN(randomBytes(lengths.scalarByteLength)).imaskn(MASK),
-        lengths.scalarByteLength
-    )
-
-    /**
-     * Computes presign (ephermeral keypair)
-     * @param rand Predefined secret ephermeral key
-     * @returns Ephemeral public key (`Fe`) and secret key (`e`)
-     */
+    /** Computes presign (ephermeral keypair) */
     const computePresign = (rand?: TArg<Uint8Array>): { Fe: BN, e: BN } => {
         const e = new BN(rand ?? randomBytes(lengths.scalarByteLength)).imaskn(MASK);
         if(rand && e.isZero()) throw new Error("Invalid custom rand for presign (rand = 0)");
@@ -48,7 +35,6 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         return h;
     }
 
-    /** Signs a message hash with a secret key. */
     const sign = (
         secretKey: TArg<Uint8Array>,
         digest: TArg<Uint8Array>,
@@ -71,7 +57,6 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         );
     }
 
-    /** Verifies a signature against message hash and public key. */
     const verify = (
         publicKey: TArg<Uint8Array>,
         digest: TArg<Uint8Array>,
@@ -92,10 +77,6 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         return y.eq(r);
     }
 
-    /**
-     * Computes shared secret key
-     * @param withCofactor Multiply result by curve cofactor? (default - `true`)
-     */
     const getSharedSecret = (
         secretKeyA: TArg<Uint8Array>,
         publicKeyB: TArg<Uint8Array>,
@@ -113,8 +94,11 @@ export const dstu4145 = (parameters: DSTUParameters) => {
         return Field.toBytes(curve.toExternalField(R.x), lengths.fieldByteLength);
     }
 
-    const keygen = (isCompressed = false): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
-        const secretKey = randomPrivateKey();
+    const keygen = (isCompressed = true): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
+        const secretKey = Field.toBytes(
+            new BN(randomBytes(lengths.scalarByteLength)).imaskn(MASK),
+            lengths.scalarByteLength
+        );
         const publicKey = getPublicKey(secretKey, isCompressed);
 
         return { secretKey, publicKey }
@@ -135,7 +119,7 @@ export const dstu4145 = (parameters: DSTUParameters) => {
  * 
  * **NOTE:** Parameters MUST be in Big-Endian
  */
-export const dstu4145_le = (parameters: DSTUParameters) => {
+export const dstu4145_le = (parameters: DSTUParameters): ECDSA => {
     const signer = dstu4145(parameters);
 
     const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> => reverseBytes(

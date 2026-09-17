@@ -1,12 +1,9 @@
 import { concatBytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { assertKalyna, getGf2mReductionBytes, xorBytes } from "../utils.js";
-import type { Cipher } from "../types.js";
+import type { Cipher, DiskMode } from "../types.js";
 
 /** XEX Tweakable Block Ciphertext Stealing (XTS) */
-export const xts = (cipher: Cipher): {
-    encrypt: (plaintext: TArg<Uint8Array>, tweak: TArg<Uint8Array>) => TRet<Uint8Array>,
-    decrypt: (ciphertext: TArg<Uint8Array>, iv: TArg<Uint8Array>) => TRet<Uint8Array>
-} => {
+export const xts = (cipher: Cipher): DiskMode => {
     assertKalyna(cipher);
     const gf2mDouble = (a: TArg<Uint8Array>): TRet<Uint8Array> => {
         const result = copyBytes(a);
@@ -80,11 +77,11 @@ export const xts = (cipher: Cipher): {
 
             return buffer;
         },
-        decrypt: (ciphertext: TArg<Uint8Array>, iv: TArg<Uint8Array>): TRet<Uint8Array> => {
+        decrypt: (ciphertext: TArg<Uint8Array>, tweak: TArg<Uint8Array>): TRet<Uint8Array> => {
             if (ciphertext.length < cipher.blockSize)
                 throw new Error(`Invalid length (need at least ${cipher.blockSize}, got ${ciphertext.length})`);
 
-            const gamma = init(iv);
+            const gamma = init(tweak);
             const decrypt = cipher.decrypt.bind(cipher);
 
             const buffer = new Uint8Array(ciphertext);

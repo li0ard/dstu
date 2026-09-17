@@ -48,3 +48,71 @@ export type AEADMode = {
     /** Open ciphertext and AAD */
     open: (ciphertext: TArg<Uint8Array>, aad?: TArg<Uint8Array>) => TRet<Uint8Array>;
 }
+
+/** Key wrap mode for {@link Cipher} */
+export type WrapMode = {
+    /** Wrap encryption key */
+    wrap: (key: TArg<Uint8Array>) => TRet<Uint8Array>;
+    /** Unwrap encryption key */
+    unwrap: (wrappedKey: TArg<Uint8Array>) => TRet<Uint8Array>;
+}
+
+/** Disk encryption mode for {@link Cipher} */
+export type DiskMode = {
+    /** Encrypt disk sector */
+    encrypt: (plaintext: TArg<Uint8Array>, tweak: TArg<Uint8Array>) => TRet<Uint8Array>;
+    /** Decrypt disk sector */
+    decrypt: (ciphertext: TArg<Uint8Array>, tweak: TArg<Uint8Array>) => TRet<Uint8Array>;
+}
+
+/** ECDSA signer */
+export type ECDSA = {
+    /**
+     * Computes public key for a secret key
+     * @param isCompressed - Whether to return compact (default), or full key
+     * @returns Public key, full when `isCompressed=false`; short when `isCompressed=true`
+     */
+    getPublicKey: (secretKey: TArg<Uint8Array>, isCompressed?: boolean) =>TRet<Uint8Array>;
+    /** 
+     * Signs a message hash with a secret key.
+     * @param secretKey - Secret key bytes.
+     * @param digest - Digest bytes.
+     * @param rand - Optional parameter for ephemeral key
+     * @returns Encoded signature bytes.
+     */
+    sign:(secretKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, rand?: TArg<Uint8Array>) => TRet<Uint8Array>;
+    /**
+     * Verifies a signature against message hash and public key.
+     * @param publicKey - Public key
+     * @param digest - Digest bytes
+     * @param signature - Encoded signature bytes.
+     * @returns Whether the signature is valid.
+     */
+    verify: (publicKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, signature: TArg<Uint8Array>) => boolean;
+    /**
+     * Compute the shared secret point from a secret key and peer public key.
+     * @param secretKeyA - Local secret key bytes.
+     * @param publicKeyB - Peer public key bytes.
+     * @param withCofactor - Whether to multiply result by curve cofactor? (default - `true`).
+     * @returns Encoded shared point.
+     */
+    getSharedSecret: (secretKeyA: TArg<Uint8Array>, publicKeyB: TArg<Uint8Array>, withCofactor?: boolean) => TRet<Uint8Array>;
+
+    /**
+     * Generate a secret/public key pair.
+     * @param isCompressed - Whether to return compact (default), or full key
+     * @returns Secret/public key pair.
+     */
+    keygen:(isCompressed?: boolean) =>{
+        secretKey: TRet<Uint8Array>,
+        publicKey: TRet<Uint8Array>
+    }
+
+    /** Byte lengths for keys and signatures exposed by this curve. */
+    lengths: Readonly<{
+        fieldByteLength: number;
+        pointByteLength: number;
+        scalarByteLength: number;
+        signatureByteLength: number;
+    }>
+}

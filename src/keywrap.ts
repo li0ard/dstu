@@ -15,7 +15,7 @@ const IV1_9311 = new Uint8Array([
 /** Key wrap (`Dstu7624Wrap`/`GOST28147Wrap`) */
 export const keyWrap = (kek: TArg<Uint8Array>, useDstu9311 = false): {
     wrap: (key: TArg<Uint8Array>, iv?: TArg<Uint8Array>) => TRet<Uint8Array>,
-    unwrap: (wrappedKey: TArg<Uint8Array>) => TRet<Uint8Array>,
+    unwrap: (wrappedKey: TArg<Uint8Array>) => TRet<Uint8Array>
 } => {
     if(kek.length != 32) throw new Error("Invalid key length");
     const cipher = new (useDstu9311 ? Dstu9311 : Kalyna256)(kek);
