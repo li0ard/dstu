@@ -1,16 +1,17 @@
 import { describe, test, expect } from "bun:test";
 import { dstu257, dstu4145, dstu431, DSTU_163_TEST, DSTU_173_ONB_TEST } from ".";
 import { hexToBytes, randomBytes, type TRet } from "@noble/hashes/utils.js";
+import type { ECDSA } from "../types";
 
 const performTest = (
-    signer: ReturnType<typeof dstu4145>,
+    signer: ECDSA,
     privateKey: Uint8Array,
     digest: Uint8Array,
     rand: Uint8Array,
     expectedPk: Uint8Array,
     expectedSign: Uint8Array
 ) => {
-    const publicKey = signer.getPublicKey(privateKey);
+    const publicKey = signer.getPublicKey(privateKey, false);
     const signature = signer.sign(privateKey, digest, rand);
 
     expect(publicKey).toStrictEqual(expectedPk as TRet<Uint8Array>);

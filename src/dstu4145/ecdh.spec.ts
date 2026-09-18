@@ -1,7 +1,10 @@
+// Unfortunately, there's no test vectors for ECDH (same for ECIES schema)
+// ECDH implementation based on https://github.com/specinfo-ua/UAPKI/blob/main/library/uapkic/src/ec.c#L1160
 import { describe, test, expect } from "bun:test";
 import { dstu257, dstu257_le, dstu4145, dstu4145_le, dstu431, dstu431_le, DSTU_233_ONB } from ".";
+import type { ECDSA } from "../types";
 
-const performTest = (signer: ReturnType<typeof dstu4145>) => {
+const performTest = (signer: ECDSA) => {
     const a = signer.keygen();
     const b = signer.keygen();
 

@@ -14,7 +14,7 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
     const curve = binaryWeierstrass(parameters);
     const { Field, Point, MASK, lengths } = curve;
 
-    const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> =>
+    const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = true): TRet<Uint8Array> =>
         Point.BASE.mul(Field.fromHexStringOrBytes(secretKey)).negate().toBytes(isCompressed);
 
     /** Computes presign (ephermeral keypair) */
@@ -122,7 +122,7 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
 export const dstu4145_le = (parameters: DSTUParameters): ECDSA => {
     const signer = dstu4145(parameters);
 
-    const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = false): TRet<Uint8Array> => reverseBytes(
+    const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = true): TRet<Uint8Array> => reverseBytes(
         signer.getPublicKey(reverseBytes(secretKey), isCompressed)
     );
 
@@ -154,7 +154,7 @@ export const dstu4145_le = (parameters: DSTUParameters): ECDSA => {
         reverseBytes(secretKeyA), reverseBytes(publicKeyB), withCofactor
     ));
 
-    const keygen = (isCompressed = false): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
+    const keygen = (isCompressed = true): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
         const { secretKey, publicKey } = signer.keygen(isCompressed);
 
         return {
@@ -175,6 +175,7 @@ export const dstu4145_le = (parameters: DSTUParameters): ECDSA => {
 
 export * from "./const.js";
 export * from "./ec/expand.js";
+export * from "./ecies.js";
 
 // ONB curves don't preinitialized because `multiplyOnb` is slow O(m^3) function
 // You need to initialize them manually via `dstu4145`
