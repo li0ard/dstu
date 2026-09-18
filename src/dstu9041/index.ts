@@ -1,7 +1,7 @@
 import { randomBytes, bytesToNumberBE, concatBytes, equalBytes, numberToBytesBE, type TArg, type TRet } from "@noble/curves/utils.js";
 import { kupyna256 } from "../kupyna/index.js";
 import { curve256, curve512, dstu9041Curve } from "./curve.js";
-import { kw } from "../modes/index.js";
+import { kw } from "../modes/kw.js";
 import { Kalyna256, Kalyna512 } from "../kalyna/index.js";
 
 const ID_KUPYNA256 = 1;
