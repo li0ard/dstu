@@ -1,6 +1,6 @@
 import type { TArg, TRet } from "@noble/hashes/utils.js";
 import BN from "bn.js";
-import { be2LEw, bn2LE, invWords, le2BN, modWords, mulWords, SQR_PRECOMP, WORD_BITS } from "./utils.js";
+import { bn2LE, invWords, le2BN, modWords, mulWords, sqrWords, WORD_BITS } from "./utils.js";
 
 /** Compute curve modulo */
 export const computeMod = (m: number, ks: number[]): BN => {
@@ -36,17 +36,7 @@ export const createField = (m: number, ks: number[]) => {
 
     const div = (x: BN, v: BN): BN => mul(x, invert(v));
 
-    const sqr = (x: BN): BN => {
-        const bytes = x.toArray();
-        const out = new Uint8Array(bytes.length * 2);
-        for(let i = 0; i < bytes.length; i++) {
-            const v = SQR_PRECOMP[bytes[i]];
-            out[2 * i] = (v >> 8) & 0xff;
-            out[2 * i + 1] = v & 0xff;
-        }
-
-        return modw(be2LEw(out));
-    }
+    const sqr = (x: BN): BN => modw(sqrWords(bn2LE(x)));
 
     const testBit = (x: BN, i: number): 0 | 1 => x.testn(i) ? 1 : 0;
     const invBit = (x: BN, i: number) => x.setn(i, !x.testn(i));

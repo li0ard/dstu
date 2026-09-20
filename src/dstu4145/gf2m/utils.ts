@@ -61,17 +61,6 @@ export const le2BN = (arr: TArg<Uint32Array>): BN => {
     return new BN(bytes, "le");
 }
 
-export const be2LEw = (bytes: TArg<Uint8Array>): TRet<Uint32Array> => {
-    const n = bytes.length,
-        arr = new Uint32Array(Math.max(1, Math.ceil(n / 4)));
-    for(let i = 0; i < n; i++) {
-        const b = bytes[n - 1 - i];
-        arr[i >> 2] |= b << ((i & 3) * 8);
-    }
-
-    return arr;
-}
-
 const wBitLen = (words: TArg<Uint32Array>): number => {
     let nz = words.length - 1;
     while(nz >= 0 && words[nz] === 0) nz--;
@@ -176,6 +165,22 @@ export const mulWords = (a: TArg<Uint32Array>, b: TArg<Uint32Array>): TRet<Uint3
         }
     }
 
+    return out;
+}
+
+export const sqrWords = (xw: TArg<Uint32Array>): TRet<Uint32Array> => {
+    const out = new Uint32Array(xw.length * 2);
+    for(let j = 0; j < xw.length; j++) {
+        const w = xw[j];
+        if(w === 0) continue;
+
+        const b0 = w & 0xff,
+            b1 = (w >>> 8) & 0xff,
+            b2 = (w >>> 16) & 0xff,
+            b3 = (w >>> 24) & 0xff;
+        out[2 * j] = SQR_PRECOMP[b0] | (SQR_PRECOMP[b1] << 16);
+        out[2 * j + 1] = SQR_PRECOMP[b2] | (SQR_PRECOMP[b3] << 16);
+    }
     return out;
 }
 

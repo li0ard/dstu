@@ -20,7 +20,7 @@ describe("[ECDH] DSTU 4145-2002 (PB)", () => {
     test("#4 (m=431, le)", () => performTest(dstu431_le));
 });
 
-describe.skipIf(process.env.SKIP_LONG == "1")("[ECDH] DSTU 4145-2002 (ONB)", () => {
+describe("[ECDH] DSTU 4145-2002 (ONB)", () => {
     test("#1 (m=233)", () => performTest(dstu4145(DSTU_233_ONB)));
     test("#2 (m=233, le)", () => performTest(dstu4145_le(DSTU_233_ONB)));
 });

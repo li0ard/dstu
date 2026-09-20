@@ -27,6 +27,6 @@ describe("[ECIES] DSTU 4145-2002 (PB)", () => {
     test("#2 (m=431)", () => performTest(dstu431));
 });
 
-describe.skipIf(process.env.SKIP_LONG == "1")("[ECIES] DSTU 4145-2002 (ONB)", () => {
+describe("[ECIES] DSTU 4145-2002 (ONB)", () => {
     test("#1 (m=233)", () => performTest(dstu4145(DSTU_233_ONB)));
 });
