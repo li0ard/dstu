@@ -64,7 +64,7 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
             return new Point(xr, yr, zr);
         }
 
-        multiply(scalar: bigint) {
+        multiply(scalar: bigint): Point {
             if (this.is0()) return Point.ZERO;
             
             let S = new Point(this.X, this.Y, this.Z);
@@ -90,7 +90,7 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
             return concatBytes(Fp.toBytes(this.x), Fp.toBytes(this.y));
         }
 
-        static fromBytes(bytes: TArg<Uint8Array>) {
+        static fromBytes(bytes: TArg<Uint8Array>): Point {
             if (bytes.length !== 2 * Fp.BYTES) throw new Error(`expected ${2 * Fp.BYTES} bytes, got ${bytes.length}`);
             const x = Fp.fromBytes(bytes.subarray(0, Fp.BYTES));
             const y = Fp.fromBytes(bytes.subarray(Fp.BYTES, 2 * Fp.BYTES));
@@ -98,7 +98,9 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
             return Point.fromAffine(x, y);
         }
 
-        static fromAffine(x: bigint, y: bigint) { return new Point(x, y, Fp.ONE).assertValidity(); }
+        static fromAffine(x: bigint, y: bigint): Point {
+            return new Point(x, y, Fp.ONE).assertValidity();
+        }
 
         static fromX(x: bigint): Point {
             const x2 = Fp.sqr(x);
