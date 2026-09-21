@@ -1,54 +1,11 @@
 import { randomBytes, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { AsnConvert, AsnProp, AsnPropTypes } from "@peculiar/asn1-schema";
-import { AlgorithmIdentifier } from "@peculiar/asn1-x509";
-import { Dstu9311, gost3431195, Gost3431195 } from "../dstu9311/index.js";
+import { Dstu9311, gost3431195 } from "../dstu9311/index.js";
 import { Kalyna256 } from "../kalyna/index.js";
 import { keyWrap } from "../keywrap.js";
 import { cfb } from "../modes/cfb.js";
 import { kupyna256 } from "../kupyna/index.js";
 import type { ECDSA } from "../types.js";
-
-/**
- * ```asn1
- * SharedInfo ::= SEQUENCE {
- *   keyInfo AlgorithmIdentifier,
- *   entityInfo [0] EXPLICIT OCTET STRING OPTIONAL,
- *   suppPubInfo  [2] EXPLICIT OCTET STRING }
- * ```
- */
-class SharedInfo {
-    @AsnProp({ type: AlgorithmIdentifier })
-    keyInfo = new AlgorithmIdentifier();
-
-    @AsnProp({ type: AsnPropTypes.OctetString, context: 0, optional: true })
-    entityInfo?: ArrayBuffer;
-
-    @AsnProp({ type: AsnPropTypes.OctetString, context: 2 })
-    suppPubInfo = new ArrayBuffer(0);
-
-    constructor(params: Partial<SharedInfo> = {}) {
-        Object.assign(this, params);
-    }
-}
-
-const removeLeadZeros = (bytes: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const idx = bytes.findIndex(i => i !== 0);
-    return idx === -1 ? new Uint8Array() : bytes.slice(idx);
-}
-
-const KEY_LENGTH = new Uint8Array([0,0,1,0]);
-const COUNTER = new Uint8Array([0,0,0,1]);
-
-const encodeSharedInfo = (oid: string, ukm?: TArg<Uint8Array>) => new Uint8Array(AsnConvert.serialize(
-    new SharedInfo({
-        keyInfo: new AlgorithmIdentifier({
-            algorithm: oid,
-            parameters: null
-        }),
-        entityInfo: ukm as ArrayBuffer | undefined,
-        suppPubInfo: KEY_LENGTH.buffer
-    })
-));
+import { iso15946_kdf } from "../iso15946.js";
 
 /** Encrypted message */
 export type EncryptedMessage = {
@@ -75,9 +32,6 @@ export const dstu4145Encrypter = (
     withCofactor = true,
     useDstu9311 = false
 ) => {
-    if(hash.outputLen != 32)
-        throw new Error("Invalid hash function. Output length must be 32 bytes");
-
     const oid = useDstu9311 ? "1.2.804.2.1.1.1.1.1.1.5" : "1.2.804.2.1.1.1.1.1.3.11";
     const Cipher = useDstu9311 ? Dstu9311 : Kalyna256;
     const macLength = useDstu9311 ? 8 : 32;
@@ -85,13 +39,7 @@ export const dstu4145Encrypter = (
     const getSharedSecret = (
         sharedKey: TArg<Uint8Array>,
         ukm?: TArg<Uint8Array>
-    ): TRet<Uint8Array> => {
-        const hasher = hash.create();
-        if(hasher instanceof Gost3431195) hasher.update(removeLeadZeros(sharedKey));
-        else hasher.update(sharedKey);
-
-        return hasher.update(COUNTER).update(encodeSharedInfo(oid, ukm)).digest();
-    }
+    ): TRet<Uint8Array> => iso15946_kdf(hash, oid, sharedKey, ukm);
 
     return Object.freeze({
         /**
