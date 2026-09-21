@@ -1,4 +1,4 @@
-// Unfortunately, there's no test vectors for this ECIES schema (same for ECDH)
+// Unfortunately, there's no test vectors for this ECIES schema
 // Schema implementation based on https://github.com/dstucrypt/jkurwa/blob/master/lib/models/Priv.js
 import { describe, test, expect } from "bun:test";
 import { dstu257, dstu4145, dstu4145EncrypterWithKupyna, dstu431, DSTU_233_ONB } from ".";
