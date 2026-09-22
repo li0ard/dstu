@@ -1,6 +1,7 @@
 import type { TArg, TRet } from "@noble/hashes/utils.js";
 import { ALPHA_MUL, ALPHA_MUL_INV, T as T_ } from "../const.js";
 import { bytesToUint64sBE, byte, xorBytes, uint64sToBytesBE } from "../utils.js";
+import type { StreamCipher } from "../types.js";
 
 const MAX_UINT64 = (1n << 64n) - 1n;
 const not = (w: bigint): bigint => MAX_UINT64 - (w & MAX_UINT64);
@@ -20,7 +21,7 @@ const T = (w: bigint): bigint =>
 const S_SIZE = 16;
 
 /** Strumok stream cipher */
-export class Strumok {
+export class Strumok implements StreamCipher {
     readonly blockSize = 128;
     readonly keySize: number;
     private S: BigUint64Array;

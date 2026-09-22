@@ -1,13 +1,14 @@
 // Based on jkurwa
 // github.com/dstucrypt/jkurwa
 
+import type { TRet } from "@noble/hashes/utils.js";
 import BN from "bn.js";
 
 const DEFAULT_CUTOFFS = [13, 41, 121, 337, 897, 2305];
 
 export const bitLength = (n: number): number => n === 0 ? 0 : 32 - Math.clz32(n);
 
-const compactNaf = (k: BN): Int32Array => {
+const compactNaf = (k: BN): TRet<Int32Array> => {
     if(k.bitLength() >= (1 << 16)) throw new Error("'k' must have bitlength < 2^16");
     if(k.isZero()) return new Int32Array(0);
 
@@ -35,7 +36,7 @@ const compactNaf = (k: BN): Int32Array => {
     return naf.length > length ? naf.subarray(0, length) : naf;
 }
 
-export const windowNaf = (width: number, k: BN): Int32Array => {
+export const windowNaf = (width: number, k: BN): TRet<Int32Array> => {
     if(width === 2) return compactNaf(k);
 
     const bigint = k.clone();

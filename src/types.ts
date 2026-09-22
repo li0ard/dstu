@@ -15,6 +15,17 @@ export type Cipher = {
     decrypt(ciphertext: TArg<Uint8Array>): TRet<Uint8Array>;
 }
 
+export type StreamCipher = {
+    /** Block size */
+    readonly blockSize: number;
+    /** Key size */
+    readonly keySize: number;
+    /** Generate keystream word */
+    next_stream(): TRet<Uint8Array>;
+    /** Perform encryption/decryption */
+    crypt(msg: TArg<Uint8Array>): TRet<Uint8Array>;
+}
+
 /** Block mode for {@link Cipher} */
 export type BlockMode = {
     /** Encrypt plaintext */
@@ -103,10 +114,7 @@ export type ECDSA = {
      * @param isCompressed - Whether to return compact (default), or full key
      * @returns Secret/public key pair.
      */
-    keygen:(isCompressed?: boolean) =>{
-        secretKey: TRet<Uint8Array>,
-        publicKey: TRet<Uint8Array>
-    }
+    keygen: (isCompressed?: boolean) => KeyPair
 
     /** Byte lengths for keys and signatures exposed by this curve. */
     lengths: Readonly<{
@@ -115,4 +123,12 @@ export type ECDSA = {
         scalarByteLength: number;
         signatureByteLength: number;
     }>
+}
+
+/** Keypair */
+export type KeyPair = {
+    /** Secret key */
+    secretKey: TArg<Uint8Array>;
+    /** Public key */
+    publicKey: TArg<Uint8Array>;
 }

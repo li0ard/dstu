@@ -1,6 +1,7 @@
 import type { EdwardsOpts } from "@noble/curves/abstract/edwards.js";
 import { Field, mod } from "@noble/curves/abstract/modular.js";
 import { concatBytes, bitGet, bitLen, bytesToNumberBE, randomBytes, type TArg, type TRet } from "@noble/curves/utils.js";
+import type { KeyPair } from "../types";
 
 export const dstu9041Curve = (parameters: EdwardsOpts) => {
     if(parameters.a != 2n) throw new Error("Unsuppored `a` parameter, must be 2");
@@ -129,7 +130,7 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
     const getPublicKey = (secretKey: TArg<Uint8Array>): TRet<Uint8Array> => 
         Point.BASE.multiply(bytesToNumberBE(secretKey)).toBytes();
 
-    const keygen = (): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
+    const keygen = (): KeyPair => {
         const secretKey = randomBytes(Fp.BYTES);
         const publicKey = getPublicKey(secretKey);
 

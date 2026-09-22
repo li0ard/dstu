@@ -7,7 +7,7 @@ import {
 import { binaryWeierstrass } from "./ec/index.js";
 import BN from "bn.js";
 import { reverseBytes } from "../utils.js";
-import type { ECDSA } from "../types.js";
+import type { ECDSA, KeyPair } from "../types.js";
 
 /** Create DSTU 4145-2002 signer (Big-Endian) */
 export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
@@ -94,7 +94,7 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
         return Field.toBytes(curve.toExternalField(R.x), lengths.fieldByteLength);
     }
 
-    const keygen = (isCompressed = true): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
+    const keygen = (isCompressed = true): KeyPair => {
         const secretKey = Field.toBytes(
             new BN(randomBytes(lengths.scalarByteLength)).imaskn(MASK),
             lengths.scalarByteLength
@@ -154,7 +154,7 @@ export const dstu4145_le = (parameters: DSTUParameters): ECDSA => {
         reverseBytes(secretKeyA), reverseBytes(publicKeyB), withCofactor
     ));
 
-    const keygen = (isCompressed = true): { secretKey: TRet<Uint8Array>, publicKey: TRet<Uint8Array> } => {
+    const keygen = (isCompressed = true): KeyPair => {
         const { secretKey, publicKey } = signer.keygen(isCompressed);
 
         return {
