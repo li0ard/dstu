@@ -22,6 +22,7 @@ npm i @li0ard/dstu
 
 - Curves and ECDSA (DSTU 4145-2002)
     - Supports polynomial and optimal normal basis
+    - Supports ECDH and encryption
 - Kalyna cipher (DSTU 7624:2014)
 - Kupyna hash function (DSTU 7564:2014)
     - Supports KMAC

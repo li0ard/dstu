@@ -10,7 +10,7 @@ import { iso15946_kdf } from "../iso15946.js";
 /** Encrypted message */
 export type EncryptedMessage = {
     /** User keying material (UKM) for KDF */
-    ukm: TArg<Uint8Array>;
+    ukm?: TArg<Uint8Array>;
     /** Encryption IV */
     iv: TArg<Uint8Array>;
     /** Wrapped encryption key */
