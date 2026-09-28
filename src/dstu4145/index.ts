@@ -71,7 +71,7 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
             return false;
 
         const h = prepareHash(digest);
-        const R = Point.BASE.mulWnaf(s).add(Q.mul(r));
+        const R = Point.BASE.mulAdd(s, Q, r);
         const y = curve.toExternalField(Field.mul(h, R.x)).imaskn(MASK);
 
         return y.eq(r);

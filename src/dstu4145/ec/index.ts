@@ -227,6 +227,27 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             return R;
         }
 
+        mulAdd(k: BN, Q: Point, l: BN): Point {
+            const m = Math.max(k.bitLength(), l.bitLength()),
+                Z = this.add(Q);
+            let R = Point.ZERO.clone();
+            for(let i = m - 1; i >= 0; --i) {
+                R = R.double();
+                if (k.testn(i)) {
+                    if (l.testn(i)) {
+                        R = R.add(Z);
+                        continue;
+                    }
+                    R = R.add(this);
+                    continue;
+                }
+                if (!l.testn(i)) continue;
+                R = R.add(Q);
+            }
+
+            return R;
+        }
+
         /** Deserialize point from bytes (compressed/uncompressed) */
         static fromBytes(bytes: TArg<Uint8Array>): Point {
             // Uncompressed
