@@ -4,7 +4,7 @@ export * from "./cfb.js";
 export * from "./cmac.js";
 export * from "./ctr.js";
 export * from "./ecb.js";
-export * from "./gcm.js";
+export { gcm } from "./gcm.js";
 export * from "./gmac.js";
 export * from "./kw.js";
 export * from "./ofb.js";

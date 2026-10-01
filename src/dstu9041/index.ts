@@ -1,4 +1,4 @@
-import { randomBytes, bytesToNumberBE, concatBytes, equalBytes, numberToBytesBE, type TArg, type TRet } from "@noble/curves/utils.js";
+import { randomBytes, bytesToNumberBE, concatBytes, equalBytes, numberToBytesBE, type TArg, type TRet, abytes } from "@noble/curves/utils.js";
 import { kupyna256 } from "../kupyna/index.js";
 import { curve256, curve512, dstu9041Curve } from "./curve.js";
 import { kw } from "../modes/kw.js";
@@ -42,6 +42,7 @@ const dstu9041 = (length: 256 | 512) => {
     }
 
     const buildStruct = (message: TArg<Uint8Array>): TRet<Uint8Array> => {
+        abytes(message);
         const paddedMessage = padMessage(message);
         const messageLength = numberToBytesBE(message.length * 8, 2);
         const digest = kupyna256(concatBytes(messageLength, paddedMessage)).subarray(-HASH_LENGTH_BYTES);
@@ -56,7 +57,7 @@ const dstu9041 = (length: 256 | 512) => {
     }
 
     const parseStruct = (struct: TArg<Uint8Array>): TRet<Uint8Array> => {
-        if(struct.length != STRUCT_BYTES) throw new Error("Invalid ciphertext");
+        abytes(struct, STRUCT_BYTES, "struct");
         if(struct[0] != ID_KUPYNA256) throw new Error("Invalid hash ID");
 
         const embeddedHash = struct.subarray(1, HASH_LENGTH_BYTES + 1);
@@ -86,6 +87,9 @@ const dstu9041 = (length: 256 | 512) => {
         getPublicKey: curve.getPublicKey,
         keygen: curve.keygen,
         encrypt: (plaintext: TArg<Uint8Array>, publicKey: TArg<Uint8Array>, rand?: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(publicKey);
+            abytes(plaintext);
+            if(rand) abytes(rand);
             const struct = buildStruct(plaintext);
 
             const e = Fn.create(bytesToNumberBE(rand ?? randomBytes(STRUCT_BYTES)));
@@ -99,8 +103,7 @@ const dstu9041 = (length: 256 | 512) => {
             return concatBytes(r, ciphertext);
         },
         decrypt: (ciphertext: TArg<Uint8Array>, privateKey: TArg<Uint8Array>): TRet<Uint8Array> => {
-            if(ciphertext.length != length / 2) throw new Error("Invalid ciphertext length");
-
+            abytes(ciphertext, length / 2, "ciphertext");
             const r = bytesToNumberBE(ciphertext.subarray(0, STRUCT_BYTES));
             if(!Fp.isValidNot0(r)) throw new Error("Invalid ciphertext");
 

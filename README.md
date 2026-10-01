@@ -35,7 +35,7 @@ npm i @li0ard/dstu
 ## Supported cipher modes
 
 - Cipher Block Chaining mode (CBC)
-- Counter with CBC-MAC (CCM) mode
+- Counter with CBC-MAC mode (CCM)
 - Cipher Feedback mode (CFB)
 - Counter mode (CTR)
 - Electronic Codebook mode (ECB)

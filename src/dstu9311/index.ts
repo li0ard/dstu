@@ -1,4 +1,4 @@
-import { concatBytes, createView, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, concatBytes, createView, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { DKE_1, keySequences } from "./const.js";
 import type { Cipher } from "../types.js";
 import { bytesToNumberLE, numberToBytesLE } from "@noble/curves/utils.js";
@@ -41,11 +41,12 @@ export class Dstu9311 implements Cipher {
         private key: TArg<Uint8Array>,
         private sbox: TArg<Uint8Array> = DKE_1,
     ) {
-        if (key.length !== this.keySize) throw new Error("Invalid key length");
+        abytes(key, this.keySize, "key");
+        abytes(sbox, 64, "sbox");
     }
 
     proceedBlock(block: TArg<Uint8Array>, sequence: number[]): TRet<Uint8Array> {
-        if (block.length !== this.blockSize) throw new Error("Invalid block size");
+        abytes(block, this.blockSize, "block");
         const roundKeys = extendKey(this.key, sequence);
         
         let a0 = Number(bytesToNumberLE(block.subarray(4,8))),

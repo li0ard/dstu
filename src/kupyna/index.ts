@@ -1,4 +1,4 @@
-import { concatBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, aoutput, clean, concatBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { bytesToUint64sLE, uint64sToBytesLE } from "../utils.js";
 import { column } from "../kalyna/index.js";
 import { numberToBytesLE } from "@noble/curves/utils.js";
@@ -22,10 +22,7 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
         this.threshold = blockLen - 12;
         this.rounds = 4 * Math.log2(blockLen) - 14;
         this.outputLen = blockLen / 2;
-        this.destroy();
-    }
 
-    destroy() {
         this.s = new BigUint64Array(this.stSize);
         this.x = new Uint8Array(this.blockLen);
         this.nx = 0;
@@ -34,7 +31,16 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
         this.s[0] = BigInt(this.blockLen);
     }
 
+    destroy() {
+        this.s[0] = BigInt(this.blockLen);
+        this.s.fill(0n, 1);
+        this.x.fill(0);
+        this.nx = 0;
+        this.len = 0n;
+    }
+
     update(data: TArg<Uint8Array>): this {
+        abytes(data);
         this.len += BigInt(data.length);
     
         if (this.nx > 0) {
@@ -71,6 +77,7 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
     }
 
     digestInto(buffer: TArg<Uint8Array>) {
+        aoutput(buffer, this);
         this.x[this.nx] = 0x80;
         this.nx++;
 
@@ -169,6 +176,7 @@ abstract class KupynaDerived<T extends Kupyna<T>> implements Hash<KupynaDerived<
     abstract _cloneInto(): KupynaDerived<T>;
 
     update(data: TArg<Uint8Array>): this {
+        abytes(data);
         this.buffer = concatBytes(this.buffer, data);
         return this;
     }
@@ -180,6 +188,7 @@ abstract class KupynaDerived<T extends Kupyna<T>> implements Hash<KupynaDerived<
         return buffer;
     }
     digestInto(buffer: TArg<Uint8Array>) {
+        aoutput(buffer, this);
         buffer.set(this.hash().update(this.buffer).digest().subarray(this.slice))
     }
 }

@@ -1,4 +1,4 @@
-import { concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, aoutput, clean, concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { Dstu9311, DKE_1 } from "../dstu9311/index.js";
 import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/utils.js";
 import { xorBytes } from "../utils.js";
@@ -79,12 +79,15 @@ export class Gost3431195 implements Hash<Gost3431195> {
     private buffer: TArg<Uint8Array>;
 
     /** GOST 34.311-95 hash function */
-    constructor(private sbox: TArg<Uint8Array> = DKE_1) { this.buffer = new Uint8Array(); }
+    constructor(private sbox: TArg<Uint8Array> = DKE_1) {
+        abytes(sbox, 64, "sbox");
+        this.buffer = new Uint8Array();
+    }
 
     /** Create hash instance */
     public static create(): Gost3431195 { return new Gost3431195(); }
 
-    destroy() { this.buffer = new Uint8Array(); }
+    destroy() { clean(this.buffer); }
 
     clone(): Gost3431195 { return this._cloneInto(); }
     _cloneInto(to?: Gost3431195): Gost3431195 {
@@ -96,12 +99,13 @@ export class Gost3431195 implements Hash<Gost3431195> {
     }
 
     update(data: TArg<Uint8Array>): this {
+        abytes(data);
         this.buffer = concatBytes(this.buffer, data);
         return this;
     }
 
     digestInto(buf: TArg<Uint8Array>) {
-        if(buf.length != this.outputLen) throw new Error("digestInto: Invalid buffer length");
+        aoutput(buf, this);
         let len = 0n, checksum = 0n;
         const h = new Uint8Array(this.blockLen), m = copyBytes(this.buffer);
         for(let i = 0; i < m.length; i += this.blockLen) {

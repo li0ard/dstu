@@ -1,4 +1,4 @@
-import { createView, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, createView, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { isKalyna, xorBytes } from "../utils.js";
 import type { Cipher, StreamMode } from "../types.js";
 
@@ -6,9 +6,10 @@ const C1 = 0x01010104, C2 = 0x01010101;
 
 /** Counter (CTR) mode */
 export const ctr = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
-    if (iv.length !== cipher.blockSize) throw new Error("Invalid IV size");
+    abytes(iv, cipher.blockSize, "iv");
 
     const incrementCounter = (ctr: TArg<Uint8Array>) => {
+        abytes(ctr);
         if(isKalyna(cipher)) {
             let j = 0;
             while (j < ctr.length) if (++ctr[j++] != 0) break;
@@ -23,6 +24,7 @@ export const ctr = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
 
     return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(msg);
             const buf = cipher.encrypt(iv),
                 output = new Uint8Array(msg.length);
             for (let i = 0; i < msg.length; i += cipher.blockSize) {

@@ -1,4 +1,4 @@
-import { randomBytes, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, randomBytes, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { Dstu9311, gost3431195 } from "../dstu9311/index.js";
 import { Kalyna256 } from "../kalyna/index.js";
 import { keyWrap } from "../keywrap.js";
@@ -53,6 +53,9 @@ export const dstu4145Encrypter = (
             publicKeyB: TArg<Uint8Array>,
             plaintext: TArg<Uint8Array>
         ): EncryptedMessage => {
+            abytes(secretKeyA);
+            abytes(publicKeyB);
+            abytes(plaintext);
             const cek = randomBytes(32),
                 ukm = randomBytes(64),
                 iv = randomBytes(macLength);
@@ -77,6 +80,12 @@ export const dstu4145Encrypter = (
             publicKeyA: TArg<Uint8Array>,
             encryptedMessage: EncryptedMessage
         ): TRet<Uint8Array> => {
+            abytes(secretKeyB);
+            abytes(publicKeyA);
+            abytes(encryptedMessage.data);
+            abytes(encryptedMessage.iv);
+            abytes(encryptedMessage.wcek);
+            if(encryptedMessage.ukm) abytes(encryptedMessage.ukm);
             const sharedKey = getSharedSecret(
                 curve.getSharedSecret(secretKeyB, publicKeyA, withCofactor),
                 encryptedMessage.ukm

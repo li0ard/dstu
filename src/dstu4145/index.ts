@@ -1,4 +1,4 @@
-import { concatBytes, randomBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abool, abytes, concatBytes, randomBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { 
     DSTU_163, DSTU_167, DSTU_173, DSTU_179, DSTU_191,
     DSTU_233, DSTU_257, DSTU_307, DSTU_367, DSTU_431,
@@ -40,6 +40,9 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
         digest: TArg<Uint8Array>,
         rand?: TArg<Uint8Array>
     ): TRet<Uint8Array> => {
+        abytes(secretKey);
+        abytes(digest);
+        if(rand) abytes(rand);
         const d = new BN(secretKey),
             h = prepareHash(digest),
             { Fe, e } = computePresign(rand);
@@ -62,8 +65,9 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
         digest: TArg<Uint8Array>,
         signature: TArg<Uint8Array>
     ): boolean => {
-        if(signature.length != lengths.signatureByteLength)
-            throw new Error("Invalid signature length");
+        abytes(publicKey);
+        abytes(digest);
+        abytes(signature, lengths.signatureByteLength, "signature");
         const Q = Point.fromBytes(publicKey);
         const s = Field.fromHexStringOrBytes(signature.subarray(0, lengths.scalarByteLength)),
             r = Field.fromHexStringOrBytes(signature.subarray(lengths.scalarByteLength));
@@ -82,6 +86,9 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
         publicKeyB: TArg<Uint8Array>,
         withCofactor = true
     ): TRet<Uint8Array> => {
+        abytes(secretKeyA);
+        abytes(publicKeyB);
+        abool(withCofactor);
         const d = new BN(secretKeyA), Q = Point.fromBytes(publicKeyB);
         if(d.isZero() || d.gte(curve.ORDER))
             throw new Error("Invalid private key, must be in range 1 < key < order");
@@ -95,6 +102,7 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
     }
 
     const keygen = (isCompressed = true): KeyPair => {
+        abool(isCompressed);
         const secretKey = Field.toBytes(
             new BN(randomBytes(lengths.scalarByteLength)).imaskn(MASK),
             lengths.scalarByteLength

@@ -1,4 +1,4 @@
-import { concatBytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, concatBytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { assertKalyna, getGf2mReductionBytes, xorBytes } from "../utils.js";
 import type { Cipher, DiskMode } from "../types.js";
 
@@ -40,6 +40,8 @@ export const xts = (cipher: Cipher): DiskMode => {
 
     return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>, tweak: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(plaintext);
+            abytes(tweak);
             if (plaintext.length < cipher.blockSize)
                 throw new Error(`Invalid length (need at least ${cipher.blockSize}, got ${plaintext.length})`);
 
@@ -78,6 +80,8 @@ export const xts = (cipher: Cipher): DiskMode => {
             return buffer;
         },
         decrypt: (ciphertext: TArg<Uint8Array>, tweak: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(ciphertext);
+            abytes(tweak);
             if (ciphertext.length < cipher.blockSize)
                 throw new Error(`Invalid length (need at least ${cipher.blockSize}, got ${ciphertext.length})`);
 

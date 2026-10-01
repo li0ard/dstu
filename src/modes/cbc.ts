@@ -1,14 +1,15 @@
-import type { TArg, TRet } from "@noble/hashes/utils.js";
+import { abytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { BlockMode, Cipher } from "../types.js";
 import { assertKalyna, xorBytes } from "../utils.js";
 
 /** Cipher Block Chaining (CBC) mode */
 export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
     assertKalyna(cipher);
-    if (iv.length !== cipher.blockSize) throw new Error("Invalid IV size");
+    abytes(iv, cipher.blockSize, "iv");
 
     return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(plaintext);
             if (plaintext.length % cipher.blockSize !== 0) throw new Error("Plaintext not aligned");
             let buf = iv;
 
@@ -22,6 +23,7 @@ export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
             return output;
         },
         decrypt: (ciphertext: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(ciphertext);
             if (ciphertext.length % cipher.blockSize !== 0) throw new Error("Ciphertext not aligned");
             let buf = iv;
 

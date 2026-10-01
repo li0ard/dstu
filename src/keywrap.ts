@@ -1,4 +1,4 @@
-import { equalBytes, concatBytes, randomBytes, type TArg, type TRet } from "@noble/curves/utils.js";
+import { equalBytes, concatBytes, randomBytes, type TArg, type TRet, abytes, abool } from "@noble/curves/utils.js";
 import { Kalyna256 } from "./kalyna/index.js";
 import { cfb, cmac } from "./modes/index.js";
 import { Dstu9311 } from "./dstu9311/index.js";
@@ -18,6 +18,8 @@ export const keyWrap = (kek: TArg<Uint8Array>, useDstu9311 = false): {
     unwrap: (wrappedKey: TArg<Uint8Array>) => TRet<Uint8Array>
 } => {
     if(kek.length != 32) throw new Error("Invalid key length");
+    abytes(kek, 32, "kek");
+    abool(useDstu9311, "useDstu9311");
     const cipher = new (useDstu9311 ? Dstu9311 : Kalyna256)(kek);
     const ivLength = useDstu9311 ? 8 : 32,
         macLength = useDstu9311 ? 4 : 32;
@@ -28,7 +30,7 @@ export const keyWrap = (kek: TArg<Uint8Array>, useDstu9311 = false): {
     return Object.freeze({
         wrap: (key: TArg<Uint8Array>, iv?: TArg<Uint8Array>): TRet<Uint8Array> => {
             iv ??= randomBytes(ivLength);
-            if(iv.length != ivLength) throw new Error("Invalid IV length");
+            abytes(iv, ivLength, "iv");
             const mac = macMode.compute(key);
 
             return finalMode.encrypt(

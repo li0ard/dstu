@@ -1,4 +1,4 @@
-import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { pad, unpad } from "../padding.js";
 import type { Cipher, WrapMode } from "../types.js";
 import { assertKalyna } from "../utils.js";
@@ -10,14 +10,14 @@ export const kw = (cipher: Cipher): WrapMode => {
 
     return Object.freeze({
         wrap: (key: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(key);
             let plaintext;
             if (key.length % cipher.blockSize === 0) plaintext = key;
             else {
                 const withLength = new Uint8Array(key.length + half);
                 withLength.set(key);
 
-                let bitLength = key.length << 3;
-                let i = 0;
+                let bitLength = key.length << 3, i = 0;
                 while (bitLength > 0) {
                     withLength[key.length + i] = bitLength & 0xff;
                     i++;
@@ -27,13 +27,13 @@ export const kw = (cipher: Cipher): WrapMode => {
                 plaintext = pad(withLength, cipher.blockSize);
             }
 
-            const r = plaintext.length / cipher.blockSize;
-            const n = 2 * (r + 1);
-            const v = (n - 1) * 6;
-            const qLen = (n - 1) * half;
+            const r = plaintext.length / cipher.blockSize,
+                n = 2 * (r + 1),
+                v = (n - 1) * 6,
+                qLen = (n - 1) * half;
 
-            const B = plaintext.slice(0, half);
-            const q = new Uint8Array(qLen);
+            const B = plaintext.slice(0, half),
+                q = new Uint8Array(qLen);
             q.set(plaintext.subarray(half));
 
             const block = new Uint8Array(cipher.blockSize);
@@ -55,15 +55,16 @@ export const kw = (cipher: Cipher): WrapMode => {
             return concatBytes(B,q);
         },
         unwrap: (wrappedKey: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(wrappedKey);
             if (wrappedKey.length < 2 * cipher.blockSize)
                 throw new Error("Invalid input length: must be at least 2 blocks");
 
-            const r = wrappedKey.length / cipher.blockSize - 1;
-            const n = 2 * (r + 1);
-            const v = (n - 1) * 6;
-            const qLen = (n - 1) * half;
-            const B = wrappedKey.slice(0, half);
-            const q = wrappedKey.slice(half, half + qLen);
+            const r = wrappedKey.length / cipher.blockSize - 1,
+                n = 2 * (r + 1),
+                v = (n - 1) * 6,
+                qLen = (n - 1) * half;
+            const B = wrappedKey.slice(0, half),
+                q = wrappedKey.slice(half, half + qLen);
 
             const block = new Uint8Array(cipher.blockSize);
             for (let i = v; i >= 1; i--) {

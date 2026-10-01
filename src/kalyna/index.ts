@@ -1,4 +1,4 @@
-import type { TArg, TRet } from "@noble/hashes/utils.js";
+import { abytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { IS, IT, T, S } from "../const.js";
 import { bytesToUint64sLE, uint64sToBytesLE, byte } from "../utils.js";
 import type { Cipher } from "../types.js";
@@ -45,7 +45,7 @@ export abstract class Kalyna implements Cipher {
         this.blockSize = N << 3;
         this.keySize = this.blockSize;
         if(isDouble) this.keySize *= 2;
-        if (key.length !== this.keySize) throw new Error("Invalid key length");
+        abytes(key, this.keySize, "key");
 
         this.wordOffsets = Array.from({length: 8}, (_, j) => Math.floor(j * this.N / 8));
         const X = 6 + 4 * Math.log2(N) + (isDouble ? 4 : 0);
@@ -184,8 +184,7 @@ export abstract class Kalyna implements Cipher {
 
     /** Encrypt block */
     encrypt(block: TArg<Uint8Array>): TRet<Uint8Array> {
-        if(block.length != this.blockSize)
-            throw new Error(`Incorrect length (need - ${this.blockSize}, got - ${block.length})`);
+        abytes(block, this.blockSize, "block");
         const t1 = new BigUint64Array(this.N), t2 = new BigUint64Array(this.N);
         this.addkey(bytesToUint64sLE(block), t1, this.erk);
 
@@ -201,8 +200,7 @@ export abstract class Kalyna implements Cipher {
 
     /** Decrypt block */
     decrypt(block: TArg<Uint8Array>): TRet<Uint8Array> {
-        if(block.length != this.blockSize)
-            throw new Error(`Incorrect length (need - ${this.blockSize}, got - ${block.length})`);
+        abytes(block, this.blockSize, "block");
         const t1 = new BigUint64Array(this.N), t2 = new BigUint64Array(this.N);
         this.subkey(bytesToUint64sLE(block), t1, this.drk.subarray(this.glOffset));
         this.IMC(t1);

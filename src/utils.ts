@@ -1,8 +1,10 @@
-import { copyBytes, bytesToNumberBE, bytesToNumberLE, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
+import { copyBytes, bytesToNumberBE, bytesToNumberLE, numberToBytesBE, numberToBytesLE, type TArg, type TRet, abytes } from "@noble/curves/utils.js";
 import type { Cipher } from "./types.js";
 import { Kalyna } from "./kalyna/index.js";
 
 export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
+    abytes(a);
+    abytes(b);
     const mlen = Math.min(a.length, b.length);
     const result = new Uint8Array(mlen);
     for(let i = 0; i < mlen; i++) result[i] = a[i] ^ b[i];
