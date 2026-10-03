@@ -53,9 +53,9 @@ export const dstu4145Encrypter = (
             publicKeyB: TArg<Uint8Array>,
             plaintext: TArg<Uint8Array>
         ): EncryptedMessage => {
-            abytes(secretKeyA);
-            abytes(publicKeyB);
-            abytes(plaintext);
+            abytes(secretKeyA, undefined, "secretKeyA");
+            abytes(publicKeyB, undefined, "publicKeyB");
+            abytes(plaintext, undefined, "plaintext");
             const cek = randomBytes(32),
                 ukm = randomBytes(64),
                 iv = randomBytes(macLength);
@@ -80,12 +80,12 @@ export const dstu4145Encrypter = (
             publicKeyA: TArg<Uint8Array>,
             encryptedMessage: EncryptedMessage
         ): TRet<Uint8Array> => {
-            abytes(secretKeyB);
-            abytes(publicKeyA);
-            abytes(encryptedMessage.data);
-            abytes(encryptedMessage.iv);
-            abytes(encryptedMessage.wcek);
-            if(encryptedMessage.ukm) abytes(encryptedMessage.ukm);
+            abytes(secretKeyB, undefined, "secretKeyB");
+            abytes(publicKeyA, undefined, "publicKeyA");
+            abytes(encryptedMessage.data, undefined, "encryptedMessage.data");
+            abytes(encryptedMessage.iv, undefined, "encryptedMessage.iv");
+            abytes(encryptedMessage.wcek, undefined, "encryptedMessage.wcek");
+            if(encryptedMessage.ukm) abytes(encryptedMessage.ukm, undefined, "encryptedMessage.ukm");
             const sharedKey = getSharedSecret(
                 curve.getSharedSecret(secretKeyB, publicKeyA, withCofactor),
                 encryptedMessage.ukm

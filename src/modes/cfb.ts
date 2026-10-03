@@ -1,18 +1,18 @@
-import { abytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, anumber, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { BlockMode, Cipher } from "../types.js";
-import { isKalyna, xorBytes } from "../utils.js";
+import { abytesAligned, isKalyna, xorBytes } from "../utils.js";
 
 /** Cipher Feedback (CFB) mode */
 export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, q: number = cipher.blockSize): BlockMode => {
     const _isKalyna = isKalyna(cipher);
     if(_isKalyna && q !== 1 && q !== 8 && q !== 16 && q !== 32 && q !== 64) throw new Error('q must be 1, 8, 16, 32, or 64');
     if(_isKalyna && q > cipher.blockSize) throw new Error('q cannot exceed block size');
-    abytes(iv)
-    if(iv.length === 0 || iv.length % cipher.blockSize !== 0) throw new Error("Invalid IV size");
+    abytesAligned(iv, cipher.blockSize, "iv");
+    anumber(q, "q");
 
     if(_isKalyna) return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(plaintext);
+            abytes(plaintext, undefined, "plaintext");
             const gamma = cipher.encrypt(iv);
             const feed = copyBytes(iv);
             const result = new Uint8Array(plaintext.length);
@@ -35,7 +35,7 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, q: number = cipher.blo
             return result;
         },
         decrypt: (ciphertext: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(ciphertext);
+            abytes(ciphertext, undefined, "ciphertext");
             const gamma = cipher.encrypt(iv);
             const feed = copyBytes(iv);
             const result = new Uint8Array(ciphertext.length);
@@ -60,7 +60,7 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, q: number = cipher.blo
     });
     else return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(plaintext);
+            abytes(plaintext, undefined, "plaintext");
             const r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += cipher.blockSize)
                 r.push(iv.subarray(i, i + cipher.blockSize));
@@ -77,7 +77,7 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, q: number = cipher.blo
             return out;
         },
         decrypt: (ciphertext: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(ciphertext);
+            abytes(ciphertext, undefined, "ciphertext");
             const r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += cipher.blockSize)
                 r.push(iv.subarray(i, i + cipher.blockSize));

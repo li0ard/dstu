@@ -1,4 +1,4 @@
-import { concatBytes, type TArg, type TRet, bytesToNumberLE, numberToBytesLE, abytes } from "@noble/curves/utils.js";
+import { anumber, concatBytes, type TArg, type TRet, bytesToNumberLE, numberToBytesLE, abytes } from "@noble/curves/utils.js";
 import type { Cipher, MACMode } from "../types.js";
 import { pad } from "../padding.js";
 import { isKalyna, xorBytes } from "../utils.js";
@@ -6,9 +6,10 @@ import { keySequences } from "../dstu9311/const.js";
 import type { Dstu9311 } from "../dstu9311/index.js";
 
 export const cmac = (cipher: Cipher, q = 16): MACMode => {
+    anumber(q, "q");
     if(isKalyna(cipher)) return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(msg);
+            abytes(msg, undefined, "msg");
             let data = msg;
             const zeroBlock = new Uint8Array(cipher.blockSize);
             if(data.length % cipher.blockSize !== 0) {
@@ -32,7 +33,7 @@ export const cmac = (cipher: Cipher, q = 16): MACMode => {
     });
     else return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(msg);
+            abytes(msg, undefined, "msg");
             const paddedLength = Math.max(8, (msg.length + 7) & ~7);
             const paddedData = new Uint8Array(paddedLength);
             paddedData.set(msg);

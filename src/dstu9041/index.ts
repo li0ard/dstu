@@ -87,8 +87,8 @@ const dstu9041 = (length: 256 | 512) => {
         getPublicKey: curve.getPublicKey,
         keygen: curve.keygen,
         encrypt: (plaintext: TArg<Uint8Array>, publicKey: TArg<Uint8Array>, rand?: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(publicKey);
-            abytes(plaintext);
+            abytes(plaintext, undefined, "plaintext");
+            abytes(publicKey, undefined, "publicKey");
             if(rand) abytes(rand);
             const struct = buildStruct(plaintext);
 
@@ -104,6 +104,7 @@ const dstu9041 = (length: 256 | 512) => {
         },
         decrypt: (ciphertext: TArg<Uint8Array>, privateKey: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(ciphertext, length / 2, "ciphertext");
+            abytes(privateKey, undefined, "privateKey");
             const r = bytesToNumberBE(ciphertext.subarray(0, STRUCT_BYTES));
             if(!Fp.isValidNot0(r)) throw new Error("Invalid ciphertext");
 

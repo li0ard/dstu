@@ -1,4 +1,4 @@
-import { abytes, aoutput, clean, concatBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, ahash, anumber, aoutput, createHasher, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { bytesToUint64sLE, uint64sToBytesLE } from "../utils.js";
 import { column } from "../kalyna/index.js";
 import { numberToBytesLE } from "@noble/curves/utils.js";
@@ -18,6 +18,7 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
     protected len!: bigint;
 
     constructor(public readonly blockLen: number) {
+        anumber(blockLen, "blockLen");
         this.stSize = (blockLen / 2) / 4;
         this.threshold = blockLen - 12;
         this.rounds = 4 * Math.log2(blockLen) - 14;
@@ -40,7 +41,7 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
     }
 
     update(data: TArg<Uint8Array>): this {
-        abytes(data);
+        abytes(data, undefined, "data");
         this.len += BigInt(data.length);
     
         if (this.nx > 0) {
@@ -155,29 +156,31 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
             this.s[column] ^= AP1[column] ^ AQ1[column];
     }
 
-    abstract clone(): Kupyna<T>;
-    abstract _cloneInto(): Kupyna<T>;
+    clone(): Kupyna<T> { return this._cloneInto(); }
+    abstract _cloneInto(to?: Kupyna<T>): Kupyna<T>;
 }
 
 abstract class KupynaDerived<T extends Kupyna<T>> implements Hash<KupynaDerived<T>> {
     readonly outputLen: number;
     readonly blockLen: number;
     readonly canXOF = false;
-    buffer: Uint8Array = new Uint8Array();
+    protected h: Hash<T>;
 
-    constructor(public hash: () => Kupyna<T>, private readonly slice: number) {
+    constructor(hash: CHash, private readonly slice: number) {
+        ahash(hash);
         this.outputLen = Math.abs(slice);
-        this.blockLen = hash().blockLen;
+        this.blockLen = hash.blockLen;
+        this.h = hash.create();
     }
 
-    destroy() {}
+    destroy() { this.h.destroy(); }
 
-    abstract clone(): KupynaDerived<T>;
-    abstract _cloneInto(): KupynaDerived<T>;
+    abstract _cloneInto(to?: KupynaDerived<T>): KupynaDerived<T>;
+    clone(): KupynaDerived<T> { return this._cloneInto(); }
 
     update(data: TArg<Uint8Array>): this {
-        abytes(data);
-        this.buffer = concatBytes(this.buffer, data);
+        abytes(data, undefined, "data");
+        this.h.update(data);
         return this;
     }
 
@@ -189,97 +192,148 @@ abstract class KupynaDerived<T extends Kupyna<T>> implements Hash<KupynaDerived<
     }
     digestInto(buffer: TArg<Uint8Array>) {
         aoutput(buffer, this);
-        buffer.set(this.hash().update(this.buffer).digest().subarray(this.slice))
+        buffer.set(this.h.digest().subarray(this.slice));
     }
 }
 
-/** Kupyna 256 bit version */
-export class Kupyna256 extends Kupyna<Kupyna256> {
-    /** Kupyna 256 bit version */
+/** Internal Kupyna-256 hash class */
+export class _Kupyna256 extends Kupyna<_Kupyna256> {
     constructor() { super(64); }
-    _cloneInto(to?: Kupyna256): Kupyna256 {
-        to ||= new Kupyna256();
-        to.s = new BigUint64Array(this.s);
-        to.x = new Uint8Array(this.x);
+    _cloneInto(to?: _Kupyna256): _Kupyna256 {
+        to ||= new _Kupyna256();
+        to.s.set(this.s);
+        to.x.set(this.x);
         to.nx = this.nx;
         to.len = this.len;
 
         return to;
     }
-    clone(): Kupyna256 { return this._cloneInto(); }
     /** Create hash instance */
-    static create(): Kupyna256 { return new Kupyna256(); }
+    static create(): _Kupyna256 { return new _Kupyna256(); }
 }
 
-/** Kupyna 512 bit version */
-export class Kupyna512 extends Kupyna<Kupyna512> {
-    /** Kupyna 512 bit version */
+/** Internal Kupyna-512 hash class */
+export class _Kupyna512 extends Kupyna<_Kupyna512> {
     constructor() { super(128); }
-    _cloneInto(to?: Kupyna512): Kupyna512 {
-        to ||= new Kupyna512();
-        to.s = new BigUint64Array(this.s);
-        to.x = new Uint8Array(this.x);
+    _cloneInto(to?: _Kupyna512): _Kupyna512 {
+        to ||= new _Kupyna512();
+        to.s.set(this.s);
+        to.x.set(this.x);
         to.nx = this.nx;
         to.len = this.len;
 
         return to;
     }
-    clone(): Kupyna512 { return this._cloneInto(); }
     /** Create hash instance */
-    static create(): Kupyna512 { return new Kupyna512(); }
+    static create(): _Kupyna512 { return new _Kupyna512(); }
 }
 
-/** Kupyna 48 bit version */
-export class Kupyna48 extends KupynaDerived<Kupyna256> {
-    /** Kupyna 48 bit version */
-    constructor() { super(Kupyna256.create, -6); }
-    _cloneInto(to?: Kupyna48): Kupyna48 {
-        to ||= new Kupyna48();
-        to.buffer = new Uint8Array(this.buffer);
+/**
+ * Kupyna-256 hash function
+ * 
+ * @param msg - message bytes to hash.
+ * @returns Digest bytes.
+ * @example
+ * ```ts
+ * import { kupyna256 } from "@li0ard/dstu/kupyna.js";
+ * 
+ * kupyna256(new Uint8Array([97, 98, 99]));
+ * kupyna256.create().update(new Uint8Array([97, 98, 99])).digest();
+ * ```
+ */
+export const kupyna256 = createHasher(_Kupyna256.create);
+/**
+ * Kupyna-512 hash function
+ * 
+ * @param msg - message bytes to hash.
+ * @returns Digest bytes.
+ * @example
+ * ```ts
+ * import { kupyna512 } from "@li0ard/dstu/kupyna.js";
+ * 
+ * kupyna512(new Uint8Array([97, 98, 99]));
+ * kupyna512.create().update(new Uint8Array([97, 98, 99])).digest();
+ * ```
+ */
+export const kupyna512 = createHasher(_Kupyna512.create);
+
+/** Internal Kupyna-48 hash class */
+export class _Kupyna48 extends KupynaDerived<_Kupyna256> {
+    constructor() { super(kupyna256, -6); }
+    _cloneInto(to?: _Kupyna48): _Kupyna48 {
+        to ||= new _Kupyna48();
+        to.h = this.h.clone();
         return to;
     }
-    clone(): Kupyna48 { return this._cloneInto(); }
     /** Create hash instance */
-    static create(): Kupyna48 { return new Kupyna48(); }
+    static create(): _Kupyna48 { return new _Kupyna48(); }
 }
 
-/** Kupyna 304 bit version */
-export class Kupyna304 extends KupynaDerived<Kupyna512> {
-    /** Kupyna 304 bit version */
-    constructor() { super(Kupyna512.create, -38); }
-    _cloneInto(to?: Kupyna304): Kupyna304 {
-        to ||= new Kupyna304();
-        to.buffer = new Uint8Array(this.buffer);
+/** Internal Kupyna-304 hash class */
+export class _Kupyna304 extends KupynaDerived<_Kupyna512> {
+    constructor() { super(kupyna512, -38); }
+    _cloneInto(to?: _Kupyna304): _Kupyna304 {
+        to ||= new _Kupyna304();
+        to.h = this.h.clone();
         return to;
     }
-    clone(): Kupyna304 { return this._cloneInto(); }
     /** Create hash instance */
-    static create(): Kupyna304 { return new Kupyna304(); }
+    static create(): _Kupyna304 { return new _Kupyna304(); }
 }
 
-/** Kupyna 384 bit version */
-export class Kupyna384 extends KupynaDerived<Kupyna512> {
-    /** Kupyna 384 bit version */
-    constructor() { super(Kupyna512.create, -48); }
-    _cloneInto(to?: Kupyna384): Kupyna384 {
-        to ||= new Kupyna384();
-        to.buffer = new Uint8Array(this.buffer);
+/** Internal Kupyna-384 hash class */
+export class _Kupyna384 extends KupynaDerived<_Kupyna512> {
+    constructor() { super(kupyna512, -48); }
+    _cloneInto(to?: _Kupyna384): _Kupyna384 {
+        to ||= new _Kupyna384();
+        to.h = this.h.clone();
         return to;
     }
-    clone(): Kupyna384 { return this._cloneInto(); }
     /** Create hash instance */
-    static create(): Kupyna384 { return new Kupyna384(); }
+    static create(): _Kupyna384 { return new _Kupyna384(); }
 }
 
-/** Kupyna 48 bit version */
-export const kupyna48 = createHasher(Kupyna48.create);
-/** Kupyna 256 bit version */
-export const kupyna256 = createHasher(Kupyna256.create);
-/** Kupyna 304 bit version */
-export const kupyna304 = createHasher(Kupyna304.create);
-/** Kupyna 384 bit version */
-export const kupyna384 = createHasher(Kupyna384.create);
-/** Kupyna 512 bit version */
-export const kupyna512 = createHasher(Kupyna512.create);
+/**
+ * Kupyna-48 hash function
+ * 
+ * @param msg - message bytes to hash.
+ * @returns Digest bytes.
+ * @example
+ * ```ts
+ * import { kupyna48 } from "@li0ard/dstu/kupyna.js";
+ * 
+ * kupyna48(new Uint8Array([97, 98, 99]));
+ * kupyna48.create().update(new Uint8Array([97, 98, 99])).digest();
+ * ```
+ */
+export const kupyna48 = createHasher(_Kupyna48.create);
+/**
+ * Kupyna-304 hash function
+ * 
+ * @param msg - message bytes to hash.
+ * @returns Digest bytes.
+ * @example
+ * ```ts
+ * import { kupyna304 } from "@li0ard/dstu/kupyna.js";
+ * 
+ * kupyna304(new Uint8Array([97, 98, 99]));
+ * kupyna304.create().update(new Uint8Array([97, 98, 99])).digest();
+ * ```
+ */
+export const kupyna304 = createHasher(_Kupyna304.create);
+/**
+ * Kupyna-384 hash function
+ * 
+ * @param msg - message bytes to hash.
+ * @returns Digest bytes.
+ * @example
+ * ```ts
+ * import { kupyna384 } from "@li0ard/dstu/kupyna.js";
+ * 
+ * kupyna384(new Uint8Array([97, 98, 99]));
+ * kupyna384.create().update(new Uint8Array([97, 98, 99])).digest();
+ * ```
+ */
+export const kupyna384 = createHasher(_Kupyna384.create);
 
 export * from "./kmac.js";

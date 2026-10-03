@@ -1,4 +1,4 @@
-import { abytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abool, abytes, anumber, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { IS, IT, T, S } from "../const.js";
 import { bytesToUint64sLE, uint64sToBytesLE, byte } from "../utils.js";
 import type { Cipher } from "../types.js";
@@ -41,6 +41,8 @@ export abstract class Kalyna implements Cipher {
 
     /** Kalyna abstract class */
     constructor(key: TArg<Uint8Array>, public readonly N: number, isDouble: boolean = false) {
+        anumber(N, "N");
+        abool(isDouble, "isDouble");
         if(N < 2 || (N & (N - 1)) !== 0) throw new Error("N must be power of 2 and >= 2");
         this.blockSize = N << 3;
         this.keySize = this.blockSize;

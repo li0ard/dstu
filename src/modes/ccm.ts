@@ -1,9 +1,8 @@
-import { equalBytes, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
+import { abytes, anumber, equalBytes, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import type { AEADMode, Cipher } from "../types.js";
 import { assertKalyna } from "../utils.js";
 import { pad } from "../padding.js";
 import { half_ctr } from "./gcm.js";
-import { abytes } from "@noble/hashes/utils.js";
 
 /** Counter with CBC-MAC (CCM) mode (AEAD) */
 export const ccm = (cipher: Cipher, iv: TArg<Uint8Array>, q = 16, Nb = 4): AEADMode => {
@@ -12,6 +11,8 @@ export const ccm = (cipher: Cipher, iv: TArg<Uint8Array>, q = 16, Nb = 4): AEADM
     if (cipher.blockSize < Nb + 1) throw new Error('Cipher block size must be >= Nb + 1');
     abytes(iv, cipher.blockSize, "iv");
     const tmp = cipher.blockSize - 1, tmp2 = tmp - Nb;
+    anumber(q, "q");
+    anumber(Nb, "Nb");
 
     const calculateMac = (msg: TArg<Uint8Array>, aad?: TArg<Uint8Array>): TRet<Uint8Array> => {
         aad ??= new Uint8Array();
@@ -41,14 +42,14 @@ export const ccm = (cipher: Cipher, iv: TArg<Uint8Array>, q = 16, Nb = 4): AEADM
 
     return Object.freeze({
         seal: (plaintext: TArg<Uint8Array>, aad?: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(plaintext);
-            if(aad) abytes(aad);
+            abytes(plaintext, undefined, "plaintext");
+            if(aad) abytes(aad, undefined, "aad");
             const mac = calculateMac(plaintext, aad);
             return mode.crypt(concatBytes(plaintext, mac));
         },
         open: (ciphertext: TArg<Uint8Array>, aad?: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(ciphertext);
-            if(aad) abytes(aad);
+            abytes(ciphertext, undefined, "ciphertext");
+            if(aad) abytes(aad, undefined, "aad");
             const decrypted = mode.crypt(ciphertext);
             const plaintext = decrypted.slice(0, -q);
             const hC = calculateMac(plaintext, aad);

@@ -1,6 +1,6 @@
 import type { EdwardsOpts } from "@noble/curves/abstract/edwards.js";
 import { Field, mod } from "@noble/curves/abstract/modular.js";
-import { concatBytes, bitGet, bitLen, bytesToNumberBE, randomBytes, type TArg, type TRet } from "@noble/curves/utils.js";
+import { concatBytes, bitGet, bitLen, bytesToNumberBE, randomBytes, type TArg, type TRet, abytes } from "@noble/curves/utils.js";
 import type { KeyPair } from "../types";
 
 export const dstu9041Curve = (parameters: EdwardsOpts) => {
@@ -128,7 +128,7 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
     }
 
     const getPublicKey = (secretKey: TArg<Uint8Array>): TRet<Uint8Array> => 
-        Point.BASE.multiply(bytesToNumberBE(secretKey)).toBytes();
+        Point.BASE.multiply(bytesToNumberBE(abytes(secretKey, undefined, "secretKey"))).toBytes();
 
     const keygen = (): KeyPair => {
         const secretKey = randomBytes(Fp.BYTES);

@@ -1,4 +1,4 @@
-import { copyBytes, bytesToNumberBE, bytesToNumberLE, numberToBytesBE, numberToBytesLE, type TArg, type TRet, abytes } from "@noble/curves/utils.js";
+import { copyBytes, bytesToNumberBE, bytesToNumberLE, numberToBytesBE, numberToBytesLE, type TArg, type TRet, abytes, anumber } from "@noble/curves/utils.js";
 import type { Cipher } from "./types.js";
 import { Kalyna } from "./kalyna/index.js";
 
@@ -80,3 +80,20 @@ export const assertKalyna = (cipher: Cipher) => {
 }
 
 export const reverseBytes = (bytes: TArg<Uint8Array>): TRet<Uint8Array> => copyBytes(bytes).reverse();
+
+const atitle = (title: string): string => title ? `"${title}" ` : '';
+
+export const abytesAligned = (
+    value: TArg<Uint8Array>,
+    blockSize: number,
+    title: string = ""
+): TRet<Uint8Array> => {
+    abytes(value);
+    anumber(blockSize);
+    if (value.length !== 0 && value.length % blockSize === 0) return value as TRet<Uint8Array>;
+    
+    const ofLen = ` of length aligned to ${blockSize}`;
+    const got = `length=${value.length}`;
+    const message = atitle(title) + 'expected Uint8Array' + ofLen + ', got ' + got;
+    throw new RangeError(message);
+}

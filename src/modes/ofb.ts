@@ -9,7 +9,7 @@ export const ofb = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
 
     return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(msg);
+            abytes(msg, undefined, "msg");
             let buf = iv;
             const output = new Uint8Array(msg.length);
             for (let i = 0; i < msg.length; i += cipher.blockSize) {

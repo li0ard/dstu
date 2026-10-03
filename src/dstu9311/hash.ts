@@ -71,59 +71,93 @@ const _step = (
     return x;
 }
 
-/** GOST 34.311-95 hash function */
-export class Gost3431195 implements Hash<Gost3431195> {
+/** Internal GOST 34.311-95 hash class */
+export class _Gost3431195 implements Hash<_Gost3431195> {
     public readonly blockLen = 32;
     public readonly outputLen = 32;
     public readonly canXOF = false;
-    private buffer: TArg<Uint8Array>;
+    private buffer = new Uint8Array(32);
+    private pos = 0;
+    private h = new Uint8Array(32);
+    private len = 0n;
+    private checksum = 0n;
 
-    /** GOST 34.311-95 hash function */
+    /** Internal GOST 34.311-95 hash class */
     constructor(private sbox: TArg<Uint8Array> = DKE_1) {
         abytes(sbox, 64, "sbox");
-        this.buffer = new Uint8Array();
     }
 
     /** Create hash instance */
-    public static create(): Gost3431195 { return new Gost3431195(); }
+    public static create(sbox?: TArg<Uint8Array>): _Gost3431195 { return new _Gost3431195(sbox); }
 
-    destroy() { clean(this.buffer); }
+    destroy() {
+        clean(this.buffer, this.h);
+        this.pos = 0;
+        this.len = 0n;
+        this.checksum = 0n;
+    }
 
-    clone(): Gost3431195 { return this._cloneInto(); }
-    _cloneInto(to?: Gost3431195): Gost3431195 {
-        to ||= new Gost3431195();
-        to.buffer = new Uint8Array(this.buffer);
+    clone(): _Gost3431195 { return this._cloneInto(); }
+    _cloneInto(to?: _Gost3431195): _Gost3431195 {
+        to ||= new _Gost3431195();
         to.sbox = this.sbox;
+        to.buffer.set(this.buffer);
+        to.pos = this.pos;
+        to.h.set(this.h);
+        to.len = this.len;
+        to.checksum = this.checksum;
 
         return to;
     }
 
+    private processBlock(block: TArg<Uint8Array>) {
+        const rev = copyBytes(block).reverse();
+        this.len += 256n;
+        this.checksum = (this.checksum + bytesToNumberBE(rev)) & r;
+        this.h.set(_step(this.h, rev, this.sbox));
+    }
+
     update(data: TArg<Uint8Array>): this {
         abytes(data);
-        this.buffer = concatBytes(this.buffer, data);
+        let offset = 0;
+        if (this.pos > 0) {
+            const take = Math.min(this.blockLen - this.pos, data.length);
+            this.buffer.set(data.subarray(0, take), this.pos);
+            this.pos += take;
+            offset = take;
+            if (this.pos === this.blockLen) {
+                this.processBlock(this.buffer);
+                this.pos = 0;
+            }
+        }
+
+        for (; offset + this.blockLen <= data.length; offset += this.blockLen)
+            this.processBlock(data.subarray(offset, offset + this.blockLen));
+
+        if (offset < data.length) {
+            this.buffer.set(data.subarray(offset), 0);
+            this.pos = data.length - offset;
+        }
+
         return this;
     }
 
     digestInto(buf: TArg<Uint8Array>) {
         aoutput(buf, this);
-        let len = 0n, checksum = 0n;
-        const h = new Uint8Array(this.blockLen), m = copyBytes(this.buffer);
-        for(let i = 0; i < m.length; i += this.blockLen) {
-            let part = m.slice(i, i + this.blockLen).reverse();
-            len += BigInt(part.length) * 8n;
-
-            checksum = (checksum + bytesToNumberBE(part)) & r;
-            if(part.length < this.blockLen)
-                part = numberToBytesBE(bytesToNumberBE(part), this.blockLen);
-            h.set(_step(h, part, this.sbox));
+        if (this.pos > 0) {
+            const part = new Uint8Array(this.blockLen);
+            part.set(this.buffer.slice(0, this.pos).reverse(), this.blockLen - this.pos);
+            this.len += BigInt(this.pos) * 8n;
+            this.checksum = (this.checksum + bytesToNumberBE(part)) & r;
+            this.h.set(_step(this.h, part, this.sbox));
         }
 
-        h.set(_step(
-            _step(h, numberToBytesBE(len, this.blockLen), this.sbox),
-            numberToBytesBE(checksum, this.blockLen),
+        const res = _step(
+            _step(this.h, numberToBytesBE(this.len, this.blockLen), this.sbox),
+            numberToBytesBE(this.checksum, this.blockLen),
             this.sbox
-        ));
-        buf.set(h.reverse());
+        );
+        buf.set(res.reverse());
         this.destroy();
     }
 
@@ -135,14 +169,43 @@ export class Gost3431195 implements Hash<Gost3431195> {
     }
 }
 
-/** GOST 34.311-95 hash function */
-export const gost3431195 = createHasher(Gost3431195.create);
+/**
+ * GOST 34.311-95 hash function
+ * 
+ * @param msg - message bytes to hash.
+ * @returns Digest bytes.
+ * @example
+ * ```ts
+ * import { gost3431195 } from "@li0ard/dstu/dstu9311.js";
+ * 
+ * gost3431195(new Uint8Array([97, 98, 99]));
+ * gost3431195.create(sbox?).update(new Uint8Array([97, 98, 99])).digest();
+ * ```
+ */
+export const gost3431195 = createHasher(_Gost3431195.create);
 
-/** GOST 34.311-95 HMAC */
-export class Gost3431195HMAC extends _HMAC<Gost3431195> {
+/**
+ * HMAC over GOST 34.311-95 hash function
+ * 
+ * @param key - authentication key bytes
+ */
+export class Gost3431195HMAC extends _HMAC<_Gost3431195> {
     constructor(key: TArg<Uint8Array>) { super(gost3431195, key); }
 }
 
-/** GOST 34.311-95 HMAC */
+/**
+ * HMAC over GOST 34.311-95 hash function
+ * 
+ * @param key - authentication key bytes
+ * @param message - message bytes to authenticate
+ * @returns Authentication tag bytes.
+ * @example
+ * ```ts
+ * import { gost3431195Hmac } from "@li0ard/dstu/dstu9311.js";
+ * const key = new Uint8Array([1, 2, 3]);
+ * const message = new Uint8Array([4, 5, 6]);
+ * const mac = gost3431195Hmac(key, message);
+ * ```
+ */
 export const gost3431195Hmac = (key: TArg<Uint8Array>, msg: TArg<Uint8Array>): TRet<Uint8Array> =>
     new Gost3431195HMAC(key).update(msg).digest();

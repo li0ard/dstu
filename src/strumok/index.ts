@@ -34,8 +34,8 @@ export class Strumok implements StreamCipher {
      * @param key Encryption key (256 or 512 bit)
      */
     constructor(key: TArg<Uint8Array>, iv: TArg<Uint8Array>) {
+        abytes(key, undefined, "key");
         abytes(iv, 32, "iv");
-        abytes(key);
         this.key = bytesToUint64sBE(key);
         this.iv = bytesToUint64sBE(iv);
         this.keySize = key.length;
@@ -119,7 +119,7 @@ export class Strumok implements StreamCipher {
 
     /** Perform encryption/decryption */
     crypt(msg: TArg<Uint8Array>): TRet<Uint8Array> {
-        abytes(msg);
+        abytes(msg, undefined, "msg");
         const out = new Uint8Array(msg.length);
         let offset = 0;
 

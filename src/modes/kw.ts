@@ -10,7 +10,7 @@ export const kw = (cipher: Cipher): WrapMode => {
 
     return Object.freeze({
         wrap: (key: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(key);
+            abytes(key, undefined, "key");
             let plaintext;
             if (key.length % cipher.blockSize === 0) plaintext = key;
             else {
@@ -55,7 +55,7 @@ export const kw = (cipher: Cipher): WrapMode => {
             return concatBytes(B,q);
         },
         unwrap: (wrappedKey: TArg<Uint8Array>): TRet<Uint8Array> => {
-            abytes(wrappedKey);
+            abytes(wrappedKey, undefined, "wrappedKey");
             if (wrappedKey.length < 2 * cipher.blockSize)
                 throw new Error("Invalid input length: must be at least 2 blocks");
 
@@ -92,6 +92,6 @@ export const kw = (cipher: Cipher): WrapMode => {
             if (current_length % cipher.blockSize !== 0) current_length -= half + 1;
 
             return recovered.slice(0, current_length);
-        },
+        }
     });
 };

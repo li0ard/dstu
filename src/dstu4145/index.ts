@@ -15,7 +15,9 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
     const { Field, Point, MASK, lengths } = curve;
 
     const getPublicKey = (secretKey: TArg<Uint8Array>, isCompressed = true): TRet<Uint8Array> =>
-        Point.BASE.mul(Field.fromHexStringOrBytes(secretKey)).negate().toBytes(isCompressed);
+        Point.BASE.mul(
+            Field.fromHexStringOrBytes(abytes(secretKey, undefined, "secretKey"))
+        ).negate().toBytes(abool(isCompressed, "isCompressed"));
 
     /** Computes presign (ephermeral keypair) */
     const computePresign = (rand?: TArg<Uint8Array>): { Fe: BN, e: BN } => {
@@ -40,9 +42,9 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
         digest: TArg<Uint8Array>,
         rand?: TArg<Uint8Array>
     ): TRet<Uint8Array> => {
-        abytes(secretKey);
-        abytes(digest);
-        if(rand) abytes(rand);
+        abytes(secretKey, undefined, "secretKey");
+        abytes(digest, undefined, "digest");
+        if(rand) abytes(rand, undefined, "rand");
         const d = new BN(secretKey),
             h = prepareHash(digest),
             { Fe, e } = computePresign(rand);
@@ -65,8 +67,8 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
         digest: TArg<Uint8Array>,
         signature: TArg<Uint8Array>
     ): boolean => {
-        abytes(publicKey);
-        abytes(digest);
+        abytes(publicKey, undefined, "publicKey");
+        abytes(digest, undefined, "digest");
         abytes(signature, lengths.signatureByteLength, "signature");
         const Q = Point.fromBytes(publicKey);
         const s = Field.fromHexStringOrBytes(signature.subarray(0, lengths.scalarByteLength)),
@@ -86,9 +88,9 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
         publicKeyB: TArg<Uint8Array>,
         withCofactor = true
     ): TRet<Uint8Array> => {
-        abytes(secretKeyA);
-        abytes(publicKeyB);
-        abool(withCofactor);
+        abytes(secretKeyA, undefined, "secretKeyA");
+        abytes(publicKeyB, undefined, "publicKeyB");
+        abool(withCofactor, "withCofactor");
         const d = new BN(secretKeyA), Q = Point.fromBytes(publicKeyB);
         if(d.isZero() || d.gte(curve.ORDER))
             throw new Error("Invalid private key, must be in range 1 < key < order");
@@ -102,7 +104,7 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
     }
 
     const keygen = (isCompressed = true): KeyPair => {
-        abool(isCompressed);
+        abool(isCompressed, "isCompressed");
         const secretKey = Field.toBytes(
             new BN(randomBytes(lengths.scalarByteLength)).imaskn(MASK),
             lengths.scalarByteLength

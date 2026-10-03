@@ -29,6 +29,7 @@ export const keyWrap = (kek: TArg<Uint8Array>, useDstu9311 = false): {
 
     return Object.freeze({
         wrap: (key: TArg<Uint8Array>, iv?: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(key, undefined, "key");
             iv ??= randomBytes(ivLength);
             abytes(iv, ivLength, "iv");
             const mac = macMode.compute(key);
@@ -38,6 +39,7 @@ export const keyWrap = (kek: TArg<Uint8Array>, useDstu9311 = false): {
             );
         },
         unwrap: (wrappedKey: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(wrappedKey, undefined, "wrappedKey");
             const dec_wrapped = finalMode.decrypt(wrappedKey).reverse();
             const iv = dec_wrapped.subarray(0, ivLength);
             const key_mac = cfb(cipher, iv, 32).decrypt(dec_wrapped.subarray(ivLength));

@@ -1,7 +1,7 @@
 import { abytes, ahash, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { AsnConvert, AsnProp, AsnPropTypes } from "@peculiar/asn1-schema";
 import { AlgorithmIdentifier } from "@peculiar/asn1-x509";
-import { Gost3431195 } from "./dstu9311/hash.js";
+import { _Gost3431195 } from "./dstu9311/hash.js";
 import { astring } from "@noble/curves/utils.js";
 
 const KEY_LENGTH = new Uint8Array([0,0,1,0]);
@@ -33,7 +33,7 @@ const encodeSharedInfo = (oid: string, ukm?: TArg<Uint8Array>) => new Uint8Array
             algorithm: oid,
             parameters: null
         }),
-        entityInfo: ukm as ArrayBuffer | undefined,
+        entityInfo: ukm?.buffer as ArrayBuffer | undefined,
         suppPubInfo: KEY_LENGTH.buffer
     })
 ));
@@ -47,13 +47,13 @@ export const iso15946_kdf = (
 ): TRet<Uint8Array> => {
     ahash(hash);
     astring(wrapAlgoOid, "wrapAlgoOid");
-    abytes(inputData);
-    if(ukm) abytes(ukm);
+    abytes(inputData, undefined, "inputData");
+    if(ukm) abytes(ukm, undefined, "ukm");
     if(hash.outputLen != 32)
         throw new Error("Invalid hash function. Output length must be 32 bytes");
 
     const hasher = hash.create();
-    return hasher.update(hasher instanceof Gost3431195
+    return hasher.update(hasher instanceof _Gost3431195
         ? removeLeadZeros(inputData)
         : inputData
     ).update(COUNTER).update(encodeSharedInfo(wrapAlgoOid, ukm)).digest();
