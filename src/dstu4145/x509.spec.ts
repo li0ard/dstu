@@ -3,7 +3,7 @@ import { AsnConvert, AsnIntegerArrayBufferConverter, AsnProp, AsnPropTypes, AsnT
 import { Certificate } from "@peculiar/asn1-x509";
 import { describe, test, expect } from "bun:test";
 import { dstu4145_le, expandPoint } from ".";
-import { DKE_1, gost3431195 } from "../dstu9311";
+import { _Gost3431195, DKE_1, gost3431195 } from "../dstu9311";
 import { kupyna256, kupyna384, kupyna512 } from "../kupyna";
 
 // ASN.1 schemes from https://zakon.rada.gov.ua/laws/show/z1398-12#Text
@@ -158,7 +158,7 @@ const proceedCertificate = (certificate: Uint8Array) => {
     let hash: Hash<any>;
     switch(parsed.signatureAlgorithm.algorithm) {
         case "1.2.804.2.1.1.1.1.3.1.1":
-            hash = gost3431195.create(parameters.dke ? new Uint8Array(parameters.dke) : DKE_1);
+            hash = new _Gost3431195(parameters.dke ? new Uint8Array(parameters.dke) : DKE_1);
         break;
         case "1.2.804.2.1.1.1.1.3.6.1.1":
             hash = kupyna256.create();

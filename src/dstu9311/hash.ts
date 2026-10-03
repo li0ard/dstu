@@ -73,9 +73,9 @@ const _step = (
 
 /** Internal GOST 34.311-95 hash class */
 export class _Gost3431195 implements Hash<_Gost3431195> {
-    public readonly blockLen = 32;
-    public readonly outputLen = 32;
-    public readonly canXOF = false;
+    readonly blockLen = 32;
+    readonly outputLen = 32;
+    readonly canXOF = false;
     private buffer = new Uint8Array(32);
     private pos = 0;
     private h = new Uint8Array(32);
@@ -88,7 +88,7 @@ export class _Gost3431195 implements Hash<_Gost3431195> {
     }
 
     /** Create hash instance */
-    public static create(sbox?: TArg<Uint8Array>): _Gost3431195 { return new _Gost3431195(sbox); }
+    static create(): _Gost3431195 { return new _Gost3431195(); }
 
     destroy() {
         clean(this.buffer, this.h);
