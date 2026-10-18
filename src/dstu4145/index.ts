@@ -22,10 +22,13 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
     /** Computes presign (ephermeral keypair) */
     const computePresign = (rand?: TArg<Uint8Array>): { Fe: BN, e: BN } => {
         const e = new BN(rand ?? randomBytes(lengths.scalarByteLength)).imaskn(MASK);
-        if(rand && e.isZero()) throw new Error("Invalid custom rand for presign (rand = 0)");
-        else if(e.isZero()) return computePresign(rand);
+        if(rand && e.isZero())
+            throw new Error("Invalid custom rand for presign (rand = 0)");
+        else if(e.isZero())
+            return computePresign(rand);
         const Fe = Point.BASE.mul(e).x;
-        if(Fe.isZero()) return computePresign(rand);
+        if(Fe.isZero())
+            return computePresign(rand);
 
         return { Fe, e }
     }
@@ -52,9 +55,11 @@ export const dstu4145 = (parameters: DSTUParameters): ECDSA => {
             throw new Error("Invalid private key, must be in range 1 < key < order");
 
         const r = curve.toExternalField(Field.mul(h, Fe)).imaskn(MASK);
-        if(r.isZero()) return sign(secretKey, digest, rand);
+        if(r.isZero())
+            return sign(secretKey, digest, rand);
         const s = e.add(d.mul(r)).mod(curve.ORDER);
-        if(s.isZero()) return sign(secretKey, digest, rand);
+        if(s.isZero())
+            return sign(secretKey, digest, rand);
 
         return concatBytes(
             Field.toBytes(s, lengths.scalarByteLength),

@@ -132,16 +132,14 @@ abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
 
     private outputTransform() {
         const t1 = new BigUint64Array(this.s), t2 = new BigUint64Array(this.stSize);
-        
         for(let r = 0n; r < BigInt(this.rounds); r += 2n) this.P(t1, t2, r);
         for(let column = 0; column < this.stSize; column++) this.s[column] ^= t1[column];
     }
 
     private F(b: TArg<BigUint64Array>) {
-        const AQ1 = new BigUint64Array(this.stSize);
-        const AP1 = new BigUint64Array(this.stSize);
-        const tmp = new BigUint64Array(this.stSize);
-
+        const AQ1 = new BigUint64Array(this.stSize),
+            AP1 = new BigUint64Array(this.stSize),
+            tmp = new BigUint64Array(this.stSize);
         for(let column = 0; column < this.stSize; column++) {
             AP1[column] = this.s[column] ^ b[column];
             AQ1[column] = b[column];

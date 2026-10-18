@@ -43,10 +43,11 @@ export const keyWrap = (kek: TArg<Uint8Array>, useDstu9311 = false): {
             const dec_wrapped = finalMode.decrypt(wrappedKey).reverse();
             const iv = dec_wrapped.subarray(0, ivLength);
             const key_mac = cfb(cipher, iv, 32).decrypt(dec_wrapped.subarray(ivLength));
-            const key = key_mac.slice(0, -macLength), mac = key_mac.subarray(-macLength);
+            const key = key_mac.slice(0, -macLength);
 
             const actualMac = macMode.compute(key);
-            if(!equalBytes(actualMac, mac)) throw new Error("Invalid MAC");
+            if(!equalBytes(actualMac, key_mac.subarray(-macLength)))
+                throw new Error("Invalid MAC");
 
             return key;
         }

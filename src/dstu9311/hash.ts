@@ -36,7 +36,6 @@ const _getCipher = (
     sbox: TArg<Uint8Array>
 ): Dstu9311 => new Dstu9311(P(xorBytes(u, v)), sbox);
 
-
 const _step = (
     hin: TArg<Uint8Array>,
     m: TArg<Uint8Array>,

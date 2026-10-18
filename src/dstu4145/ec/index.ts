@@ -7,18 +7,18 @@ import { createField, init_onb_parameters } from "../gf2m/index.js";
 export const binaryWeierstrass = (parameters: DSTUParameters) => {
     const field = createField(parameters.m, parameters.ks);
 
-    const onb = parameters.onb ? init_onb_parameters(parameters) : undefined;
-    const toInternal = (f: BN): BN => onb ? onb.onbToPb(f) : f.clone();
-    const toExternal = (f: BN): BN => onb ? onb.pbToOnb(f) : f.clone();
+    const onb = parameters.onb ? init_onb_parameters(parameters) : undefined,
+        toInternal = (f: BN): BN => onb ? onb.onbToPb(f) : f.clone(),
+        toExternal = (f: BN): BN => onb ? onb.pbToOnb(f) : f.clone();
 
-    const order = field.fromHexStringOrBytes(parameters.order);
-    const b = toInternal(field.fromHexStringOrBytes(parameters.b));
-    const c = field.sqrt(b);
+    const order = field.fromHexStringOrBytes(parameters.order),
+        b = toInternal(field.fromHexStringOrBytes(parameters.b)),
+        c = field.sqrt(b);
 
     const isValidXY = (x: BN, y: BN): boolean => {
-        const x2 = field.sqr(x);
-        const lhs = field.sqr(y).ixor(field.mul(x,y));
-        const rhs = field.mul(x2, x).ixor(b);
+        const x2 = field.sqr(x),
+            lhs = field.sqr(y).ixor(field.mul(x,y)),
+            rhs = field.mul(x2, x).ixor(b);
         // `a` must be 0 or 1, so if a = 1, just add x^2
         if(parameters.a === 1) rhs.ixor(x2);
 
@@ -35,21 +35,21 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
     });
 
     const Madd = (X1: BN, Z1: BN, X2: BN, Z2: BN, x: BN): [BN, BN] => {
-        const A = field.mul(X1, Z2);
-        const B = field.mul(Z1, X2);
-        const T = field.mul(A, B);
-        const Znew = field.sqr(A.ixor(B));
-        const Xnew = field.mul(Znew, x).ixor(T);
+        const A = field.mul(X1, Z2),
+            B = field.mul(Z1, X2),
+            T = field.mul(A, B);
+        const Znew = field.sqr(A.ixor(B)),
+            Xnew = field.mul(Znew, x).ixor(T);
 
         return [Xnew, Znew];
     }
 
     const Mdouble = (X: BN, Z: BN): [BN, BN] => {
-        const X2 = field.sqr(X);
-        const Z2 = field.sqr(Z);
-        const T = field.sqr(field.mul(Z2, c));
-        const Znew = field.mul(X2, Z2);
-        const Xnew = field.sqr(X2).ixor(T);
+        const X2 = field.sqr(X),
+            Z2 = field.sqr(Z),
+            T = field.sqr(field.mul(Z2, c));
+        const Znew = field.mul(X2, Z2),
+            Xnew = field.sqr(X2).ixor(T);
 
         return [Xnew, Znew];
     }
@@ -125,15 +125,15 @@ export const binaryWeierstrass = (parameters: DSTUParameters) => {
             // Convert projective coords to affine
             if(Z1.isZero()) return Point.ZERO.clone();
             if(Z2.isZero()) return this.negate();
-            const A = field.mul(this.x, Z1).ixor(X1);
-            const B = field.mul(this.x, Z2).ixor(X2);
-            const C = field.mul(Z1, Z2);
-            const D = field.mul(C, this.x);
-            const E = field.invert(field.mul(D, Z1));
-            const F = field.mul(A, B).ixor(field.mul(C, xSqr.ixor(this.y)));
+            const A = field.mul(this.x, Z1).ixor(X1),
+                B = field.mul(this.x, Z2).ixor(X2),
+                C = field.mul(Z1, Z2),
+                D = field.mul(C, this.x),
+                E = field.invert(field.mul(D, Z1)),
+                F = field.mul(A, B).ixor(field.mul(C, xSqr.ixor(this.y)));
 
-            const Xk = field.mul(X1, field.mul(D, E));
-            const Yk = field.mul(field.mul(A, F), E).ixor(this.y);
+            const Xk = field.mul(X1, field.mul(D, E)),
+                Yk = field.mul(field.mul(A, F), E).ixor(this.y);
 
             return new Point(Xk, Yk);
         }

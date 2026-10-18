@@ -65,10 +65,9 @@ export abstract class Kalyna implements Cipher {
             t1 = new BigUint64Array(this.N), t2 = new BigUint64Array(this.N);
         t1[0] = isDoubleKey ? BigInt(2 * this.N + 2 * log2N + 1) : BigInt(2 * this.N + 1);
 
-        const keys = bytesToUint64sLE(key);
+        const keys = bytesToUint64sLE(key),
+            _0 = new BigUint64Array(this.N);
         let k = new BigUint64Array(isDoubleKey ? this.N * 2 : this.N);
-        const _0 = new BigUint64Array(this.N);
-
         if (isDoubleKey) {
             const ka = keys.subarray(0, this.N);
             this.addkey(t1, t2, ka);
@@ -87,12 +86,12 @@ export abstract class Kalyna implements Cipher {
         let constant = 0x0001000100010001n;
         for (let i = 0; i < R; i++) {
             const offset = i * (this.N * 2);
-        
+
             if (i > 0) {
                 if (!isDoubleKey) swap_block(k, this.N);
                 else if (i % 2 === 0) swap_block(k, this.N * 2);
             }
-        
+
             const keySource = isDoubleKey
                 ? (i % 2 === 0 ? k.subarray(0, this.N) : k.subarray(this.N))
                 : k;
@@ -100,7 +99,7 @@ export abstract class Kalyna implements Cipher {
             this.addkey(keySource, t2, ksc);
             this.G(t2, t1, ksc);
             this.GL(t1, rk.subarray(offset), ksc);
-        
+
             if (i < R - 1) this.makeOddKey(rk.subarray(offset), rk.subarray(offset + this.N));
             constant <<= 1n;
         }
@@ -112,10 +111,9 @@ export abstract class Kalyna implements Cipher {
     }
 
     private makeOddKey(evenkey: TArg<BigUint64Array>, oddkey: TArg<BigUint64Array>) {
-        const offset = 2 * this.N + 3;
-        const evenkeys = uint64sToBytesLE(evenkey);
-        const oddkeys = uint64sToBytesLE(oddkey);
-
+        const offset = 2 * this.N + 3,
+            evenkeys = uint64sToBytesLE(evenkey),
+            oddkeys = uint64sToBytesLE(oddkey);
         oddkeys.set(evenkeys.subarray(offset, this.blockSize));
         oddkeys.set(evenkeys.subarray(0, offset), this.blockSize - offset);
         oddkey.set(bytesToUint64sLE(oddkeys));

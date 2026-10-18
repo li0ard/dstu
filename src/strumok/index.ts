@@ -87,21 +87,19 @@ export class Strumok implements StreamCipher {
         this.r[1] = T(this.r[0]);
         this.r[0] = r1 + this.S[s];
     }
-    
+
     private init(i: number) {
-        const prev = (i + 15) % S_SIZE;
-        const s13 = (i + 13) % S_SIZE;
-        const s11 = (i + 11) % S_SIZE;
- 
-        const outfrom_fsm = (this.r[0] + this.S[prev]) ^ this.r[1];
+        const prev = (i + 15) % S_SIZE,
+            s13 = (i + 13) % S_SIZE,
+            s11 = (i + 11) % S_SIZE,
+            outfrom_fsm = (this.r[0] + this.S[prev]) ^ this.r[1];
         this.S[i] = a_mul(this.S[i]) ^ this.S[s13] ^ ainv_mul(this.S[s11]) ^ outfrom_fsm;
         this.updateR(s13);
     }
 
     private round(i: number): bigint {
-        const s13 = (i + 13) % S_SIZE;
-        const s11 = (i + 11) % S_SIZE;
- 
+        const s13 = (i + 13) % S_SIZE,
+            s11 = (i + 11) % S_SIZE;
         this.S[i] = a_mul(this.S[i]) ^ this.S[s13] ^ ainv_mul(this.S[s11]);
         this.updateR(s13);
         const next = (i + 1) % S_SIZE;
@@ -113,7 +111,7 @@ export class Strumok implements StreamCipher {
     next_stream(): TRet<Uint8Array> {
         const out_stream = new BigUint64Array(S_SIZE);
         for (let i = 0; i < S_SIZE; i++) out_stream[i] = this.round(i);
- 
+
         return uint64sToBytesBE(out_stream);
     }
 
@@ -122,7 +120,6 @@ export class Strumok implements StreamCipher {
         abytes(msg, undefined, "msg");
         const out = new Uint8Array(msg.length);
         let offset = 0;
-
         while (offset < msg.length) {
             const chunk = xorBytes(msg.subarray(offset), this.next_stream());
             out.set(chunk, offset);

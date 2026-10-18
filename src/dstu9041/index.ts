@@ -32,8 +32,10 @@ const dstu9041 = (length: 256 | 512) => {
         { Point } = curve, { Fp, Fn } = Point;
 
     const padMessage = (message: TArg<Uint8Array>): TRet<Uint8Array> => {
-        if(message.length == 0) throw new Error("Invalid message length");
-        if(message.length > PADDED_MESSAGE_BYTES) throw new Error("Message too long");
+        if(message.length == 0)
+            throw new Error("Invalid message length");
+        if(message.length > PADDED_MESSAGE_BYTES)
+            throw new Error("Message too long");
 
         const paddedMessage = new Uint8Array(PADDED_MESSAGE_BYTES);
         paddedMessage.set(message, PADDED_MESSAGE_BYTES - message.length);
@@ -43,9 +45,9 @@ const dstu9041 = (length: 256 | 512) => {
 
     const buildStruct = (message: TArg<Uint8Array>): TRet<Uint8Array> => {
         abytes(message);
-        const paddedMessage = padMessage(message);
-        const messageLength = numberToBytesBE(message.length * 8, 2);
-        const digest = kupyna256(concatBytes(messageLength, paddedMessage)).subarray(-HASH_LENGTH_BYTES);
+        const paddedMessage = padMessage(message),
+            messageLength = numberToBytesBE(message.length * 8, 2),
+            digest = kupyna256(concatBytes(messageLength, paddedMessage)).subarray(-HASH_LENGTH_BYTES);
 
         const struct = new Uint8Array(STRUCT_BYTES);
         struct[0] = ID_KUPYNA256;
@@ -60,25 +62,28 @@ const dstu9041 = (length: 256 | 512) => {
         abytes(struct, STRUCT_BYTES, "struct");
         if(struct[0] != ID_KUPYNA256) throw new Error("Invalid hash ID");
 
-        const embeddedHash = struct.subarray(1, HASH_LENGTH_BYTES + 1);
-        const messageLength = struct.subarray(1 + HASH_LENGTH_BYTES, 3 + HASH_LENGTH_BYTES);
-        const paddedMessage = struct.subarray(3 + HASH_LENGTH_BYTES);
+        const embeddedHash = struct.subarray(1, HASH_LENGTH_BYTES + 1),
+            messageLength = struct.subarray(1 + HASH_LENGTH_BYTES, 3 + HASH_LENGTH_BYTES),
+            paddedMessage = struct.subarray(3 + HASH_LENGTH_BYTES);
 
         const messageBits = Number(bytesToNumberBE(messageLength));
-        if(messageBits == 0) throw new Error("Invalid message length");
-        if(messageBits > MAX_LENGTH) throw new Error("Message too long");
+        if(messageBits == 0)
+            throw new Error("Invalid message length");
+        if(messageBits > MAX_LENGTH)
+            throw new Error("Message too long");
 
         // message len + padded message
         const digest = kupyna256(struct.subarray(1 + HASH_LENGTH_BYTES)).subarray(-HASH_LENGTH_BYTES);
         if(!equalBytes(embeddedHash, digest))
             throw new Error("Integrity check failed, hash mismatch");
 
-        const messageBytes = Math.ceil(messageBits / 8);
-        const paddingLen = PADDED_MESSAGE_BYTES - messageBytes;
+        const messageBytes = Math.ceil(messageBits / 8),
+            paddingLen = PADDED_MESSAGE_BYTES - messageBytes;
         let invalidPadding = 0;
         for(let i = 0; i < paddedMessage.length; i++)
             invalidPadding |= (i < paddingLen ? 1 : 0) & (paddedMessage[i] != 0 ? 1 : 0);
-        if(invalidPadding != 0) throw new Error("Invalid padding");
+        if(invalidPadding != 0)
+            throw new Error("Invalid padding");
 
         return paddedMessage.slice(paddingLen);
     }
@@ -91,10 +96,9 @@ const dstu9041 = (length: 256 | 512) => {
             abytes(publicKey, undefined, "publicKey");
             if(rand) abytes(rand);
             const struct = buildStruct(plaintext);
-
-            const e = Fn.create(bytesToNumberBE(rand ?? randomBytes(STRUCT_BYTES)));
-            const r = Fp.toBytes(Point.BASE.multiply(e).x);
-            const key = Fp.toBytes(Point.fromBytes(publicKey).multiply(e).x);
+            const e = Fn.create(bytesToNumberBE(rand ?? randomBytes(STRUCT_BYTES))),
+                r = Fp.toBytes(Point.BASE.multiply(e).x),
+                key = Fp.toBytes(Point.fromBytes(publicKey).multiply(e).x);
 
             const plaintext_kw = new Uint8Array(2 * STRUCT_BYTES);
             plaintext_kw.set(struct);
@@ -106,10 +110,11 @@ const dstu9041 = (length: 256 | 512) => {
             abytes(ciphertext, length / 2, "ciphertext");
             abytes(privateKey, undefined, "privateKey");
             const r = bytesToNumberBE(ciphertext.subarray(0, STRUCT_BYTES));
-            if(!Fp.isValidNot0(r)) throw new Error("Invalid ciphertext");
+            if(!Fp.isValidNot0(r))
+                throw new Error("Invalid ciphertext");
 
-            const T = Point.fromX(r).multiply(bytesToNumberBE(privateKey));
-            const key = Fp.toBytes(T.x);
+            const T = Point.fromX(r).multiply(bytesToNumberBE(privateKey)),
+                key = Fp.toBytes(T.x);
             const plaintext = kw(new Сipher(key)).unwrap(ciphertext.subarray(STRUCT_BYTES));
 
             return parseStruct(plaintext.subarray(0, STRUCT_BYTES));

@@ -4,25 +4,26 @@ import { concatBytes, bitGet, bitLen, bytesToNumberBE, randomBytes, type TArg, t
 import type { KeyPair } from "../types";
 
 export const dstu9041Curve = (parameters: EdwardsOpts) => {
-    if(parameters.a != 2n) throw new Error("Unsuppored `a` parameter, must be 2");
-    if(mod(parameters.p, 8n) != 5n) throw new Error("Unsupported `p` prime");
+    if(parameters.a != 2n)
+        throw new Error("Unsuppored `a` parameter, must be 2");
+    if(mod(parameters.p, 8n) != 5n)
+        throw new Error("Unsupported `p` prime");
     const Fp = Field(parameters.p), Fn = Field(parameters.n);
     const { a, d, Gx, Gy } = parameters;
 
     const isValidXY = (x: bigint, y: bigint): boolean => {
-        const x2 = Fp.sqr(x);
-        const y2 = Fp.sqr(y);
-        const left = Fp.add(x2, Fp.mul(a, y2));
-        const right = Fp.add(Fp.ONE, Fp.mul(d, Fp.mul(x2, y2)));
+        const x2 = Fp.sqr(x), y2 = Fp.sqr(y);
+        const left = Fp.add(x2, Fp.mul(a, y2)),
+            right = Fp.add(Fp.ONE, Fp.mul(d, Fp.mul(x2, y2)));
 
         return Fp.eql(left, right);
     }
 
     if(!isValidXY(Gx, Gy)) throw new Error("Invalid base point");
 
-    const p_minus_1 = Fp.sub(Fp.ZERO, Fp.ONE);
-    const p_minus_1_over_2 = Fp.div(Fp.sub(Fp.ORDER, Fp.ONE), 2n);
-    const a_over_d = Fp.div(a, d);
+    const p_minus_1 = Fp.sub(Fp.ZERO, Fp.ONE),
+        p_minus_1_over_2 = Fp.div(Fp.sub(Fp.ORDER, Fp.ONE), 2n),
+        a_over_d = Fp.div(a, d);
 
     class Point {
         static BASE = new Point(Gx, Gy, Fp.ONE);
@@ -38,36 +39,38 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
         }
 
         get x(): bigint {
+            if(Fp.eql(this.Z, Fp.ONE)) return this.X;
             return Fp.div(this.X, this.Z);
         }
 
         get y(): bigint {
+            if(Fp.eql(this.Z, Fp.ONE)) return this.Y;
             return Fp.div(this.Y, this.Z);
         }
 
         add(other: Point): Point {
-            const A = Fp.mul(this.Z, other.Z);
-            const B = Fp.sqr(A);
-            const C = Fp.mul(this.X, other.X);
-            const D = Fp.mul(this.Y, other.Y);
-            const E = Fp.mul(d, Fp.mul(C, D));
-            const F = Fp.sub(B, E);
-            const G = Fp.add(B, E);
+            const A = Fp.mul(this.Z, other.Z),
+                B = Fp.sqr(A),
+                C = Fp.mul(this.X, other.X),
+                D = Fp.mul(this.Y, other.Y),
+                E = Fp.mul(d, Fp.mul(C, D)),
+                F = Fp.sub(B, E),
+                G = Fp.add(B, E);
 
-            const self_sum = Fp.add(this.X, this.Y);
-            const other_sum = Fp.add(other.X, other.Y);
-            const cross = Fp.mul(self_sum, other_sum);
+            const self_sum = Fp.add(this.X, this.Y),
+                other_sum = Fp.add(other.X, other.Y),
+                cross = Fp.mul(self_sum, other_sum);
 
-            const xr = Fp.mul(Fp.mul(A, G), Fp.sub(C, Fp.mul(a, D)));
-            const yr = Fp.mul(Fp.mul(A, F), Fp.sub(Fp.sub(cross, C), D));
-            const zr = Fp.mul(F, G);
+            const xr = Fp.mul(Fp.mul(A, G), Fp.sub(C, Fp.mul(a, D))),
+                yr = Fp.mul(Fp.mul(A, F), Fp.sub(Fp.sub(cross, C), D)),
+                zr = Fp.mul(F, G);
 
             return new Point(xr, yr, zr);
         }
 
         multiply(scalar: bigint): Point {
             if (this.is0()) return Point.ZERO;
-            
+
             let S = new Point(this.X, this.Y, this.Z);
             for (let i = bitLen(scalar) - 2; i >= 0; i--) {
                 S = S.add(S);
@@ -82,8 +85,8 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
         }
 
         assertValidity(): this {
-            if(!isValidXY(this.x, this.y)) throw new Error("Assertation failed: point isn't on curve");
-
+            if(!isValidXY(this.x, this.y))
+                throw new Error("Assertation failed: point isn't on curve");
             return this;
         }
 
@@ -92,9 +95,10 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
         }
 
         static fromBytes(bytes: TArg<Uint8Array>): Point {
-            if (bytes.length !== 2 * Fp.BYTES) throw new Error(`expected ${2 * Fp.BYTES} bytes, got ${bytes.length}`);
-            const x = Fp.fromBytes(bytes.subarray(0, Fp.BYTES));
-            const y = Fp.fromBytes(bytes.subarray(Fp.BYTES, 2 * Fp.BYTES));
+            if (bytes.length !== 2 * Fp.BYTES)
+                throw new Error(`expected ${2 * Fp.BYTES} bytes, got ${bytes.length}`);
+            const x = Fp.fromBytes(bytes.subarray(0, Fp.BYTES)),
+                y = Fp.fromBytes(bytes.subarray(Fp.BYTES, 2 * Fp.BYTES));
 
             return Point.fromAffine(x, y);
         }
@@ -112,10 +116,9 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
                 Fp.eql(x2, a_over_d)
             ) throw new Error("Invalid x-coordinate, can't recover y");
 
-            const num = Fp.sub(Fp.ONE, x2);
-            const denom = Fp.sub(a, Fp.mul(d, x2));
-            const v = Fp.div(num, denom);
-
+            const num = Fp.sub(Fp.ONE, x2),
+                denom = Fp.sub(a, Fp.mul(d, x2)),
+                v = Fp.div(num, denom);
             if(Fp.pow(v, p_minus_1_over_2) != Fp.ONE)
                 throw new Error("Invalid x-coordinate, non-complience with euler criterion");
 

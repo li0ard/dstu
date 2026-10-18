@@ -22,12 +22,11 @@ const G = (v: number, sbox: TArg<Uint8Array>): number => {
 }
 
 const extendKey = (key: TArg<Uint8Array>, sequence: number[]): TRet<Uint32Array> => {
-    const view = createView(key);
-    const result = new Uint32Array(sequence.length);
-    
+    const view = createView(key),
+        result = new Uint32Array(sequence.length);
     for (let i = 0; i < sequence.length; i++)
         result[i] = view.getUint32(sequence[i] * 4, true);
-    
+
     return result;
 }
 
