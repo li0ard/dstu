@@ -13,33 +13,34 @@ export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Ar
 }
 
 export const bytesToUint64sBE = (b: TArg<Uint8Array>): TRet<BigUint64Array> => {
-    const size = Math.floor(b.length / 8);
-    const result = new BigUint64Array(size);
-    
+    const size = Math.floor(b.length / 8),
+        result = new BigUint64Array(size);
     for (let i = 0; i < size; i++) result[i] = bytesToNumberBE(b.subarray(i * 8, i * 8 + 8));
+
     return result;
 }
 
 export const uint64sToBytesBE = (w: TArg<BigUint64Array>): TRet<Uint8Array> => {
     const result = new Uint8Array(w.length * 8);
     for (let i = 0; i < w.length; i++) result.set(numberToBytesBE(w[i], 8), i * 8);
+
     return result;
 }
 
 export const bytesToUint64sLE = (b: TArg<Uint8Array>): TRet<BigUint64Array> => {
-    const size = Math.floor(b.length / 8);
-    const result = new BigUint64Array(size);
-    
+    const size = Math.floor(b.length / 8),
+        result = new BigUint64Array(size);
     for (let i = 0; i < size; i++) result[i] = bytesToNumberLE(b.subarray(i * 8, i * 8 + 8));
+
     return result;
 }
 
 export const uint64sToBytesLE = (w: TArg<BigUint64Array>): TRet<Uint8Array> => {
     const result = new Uint8Array(w.length * 8);
     for (let i = 0; i < w.length; i++) result.set(numberToBytesLE(w[i], 8), i * 8);
+
     return result;
 }
-
 
 export const byte = (a: bigint) => Number(a & 0xFFn);
 
@@ -50,10 +51,9 @@ export const getGf2mReductionBytes = (blockSize: number): number[] => [
 ][Math.log2(blockSize) - 4];
 
 export const gf2mMul = (blockSize: number, a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const temp = copyBytes(a);
-    const result = new Uint8Array(blockSize);
-    
-    const reductionBytes = getGf2mReductionBytes(blockSize);
+    const temp = copyBytes(a),
+        result = new Uint8Array(blockSize),
+        reductionBytes = getGf2mReductionBytes(blockSize);
     for (let i = 0; i < blockSize * 8; i++) {
         const byteIndex = Math.floor(i / 8);
         const bitIndex = i % 8;
@@ -79,7 +79,11 @@ export const assertKalyna = (cipher: Cipher) => {
     if(!isKalyna(cipher)) throw new Error("Cipher mode only for Kalyna");
 }
 
-export const reverseBytes = (bytes: TArg<Uint8Array>): TRet<Uint8Array> => copyBytes(bytes).reverse();
+export const reverseBytes = (
+    bytes: TArg<Uint8Array>,
+    from?: number,
+    to?: number
+): TRet<Uint8Array> => bytes.slice(from, to).reverse();
 
 const atitle = (title: string): string => title ? `"${title}" ` : '';
 
@@ -92,8 +96,8 @@ export const abytesAligned = (
     anumber(blockSize);
     if (value.length !== 0 && value.length % blockSize === 0) return value as TRet<Uint8Array>;
     
-    const ofLen = ` of length aligned to ${blockSize}`;
-    const got = `length=${value.length}`;
-    const message = atitle(title) + 'expected Uint8Array' + ofLen + ', got ' + got;
+    const ofLen = ` of length aligned to ${blockSize}`,
+        got = `length=${value.length}`,
+        message = atitle(title) + 'expected Uint8Array' + ofLen + ', got ' + got;
     throw new RangeError(message);
 }

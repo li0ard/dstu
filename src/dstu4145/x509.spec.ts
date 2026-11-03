@@ -120,14 +120,14 @@ export class DSTU4145Params {
 
 const createSignerFromParameters = (params: ECBinary) => {
     if(!params.f.poly) throw new Error("Missing poly coefficients");
-    const m = params.f.m;
-    const ks: number[] = params.f.poly.pentanomial
+    const m = params.f.m,
+        ks: number[] = params.f.poly.pentanomial
         ? Object.values(params.f.poly.pentanomial)
         : [params.f.poly.trinomial!];
 
-    const a = params.a;
-    const b = bytesToHex(new Uint8Array(params.b).reverse());
-    const order = bytesToHex(new Uint8Array(params.n));
+    const a = params.a,
+        b = bytesToHex(new Uint8Array(params.b).reverse()),
+        order = bytesToHex(new Uint8Array(params.n));
 
     const G = expandPoint(
         new Uint8Array(params.bp).reverse(),
