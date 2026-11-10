@@ -67,7 +67,7 @@ export abstract class Kalyna implements Cipher {
 
         const keys = bytesToUint64sLE(key),
             _0 = new BigUint64Array(this.N);
-        let k = new BigUint64Array(isDoubleKey ? this.N * 2 : this.N);
+        const k = new BigUint64Array(isDoubleKey ? this.N * 2 : this.N);
         if (isDoubleKey) {
             const ka = keys.subarray(0, this.N);
             this.addkey(t1, t2, ka);
