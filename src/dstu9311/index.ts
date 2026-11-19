@@ -38,7 +38,7 @@ export class Dstu9311 implements Cipher {
 
     /** DSTU 9311:2024 cipher (Revised DSTU GOST 28147:2009) */
     constructor(
-        private key: TArg<Uint8Array>,
+        key: TArg<Uint8Array>,
         private sbox: TArg<Uint8Array> = DKE_1,
     ) {
         abytes(key, this.keySize, "key");

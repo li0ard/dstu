@@ -2,10 +2,10 @@ import { abytes, ahash, type CHash, type Hash, type TArg, type TRet } from "@nob
 import { AsnConvert, AsnProp, AsnPropTypes } from "@peculiar/asn1-schema";
 import { AlgorithmIdentifier } from "@peculiar/asn1-x509";
 import { _Gost3431195 } from "./dstu9311/hash.js";
-import { astring } from "@noble/curves/utils.js";
+import { _NULL } from "./utils.js";
 
-const KEY_LENGTH = new Uint8Array([0,0,1,0]);
-const COUNTER = new Uint8Array([0,0,0,1]);
+const KEY_LENGTH = /* @__PURE__ */ new Uint8Array([0,0,1,0]);
+const COUNTER = /* @__PURE__ */ new Uint8Array([0,0,0,1]);
 
 class SharedInfo {
     @AsnProp({ type: AlgorithmIdentifier })
@@ -24,7 +24,7 @@ class SharedInfo {
 
 const removeLeadZeros = (bytes: TArg<Uint8Array>): TRet<Uint8Array> => {
     const idx = bytes.findIndex(i => i !== 0);
-    return idx === -1 ? new Uint8Array() : bytes.slice(idx);
+    return idx === -1 ? _NULL : bytes.slice(idx);
 }
 
 const encodeSharedInfo = (oid: string, ukm?: TArg<Uint8Array>) => new Uint8Array(AsnConvert.serialize(
@@ -46,7 +46,6 @@ export const iso15946_kdf = (
     ukm?: TArg<Uint8Array>
 ): TRet<Uint8Array> => {
     ahash(hash);
-    astring(wrapAlgoOid, "wrapAlgoOid");
     abytes(inputData, undefined, "inputData");
     if(ukm) abytes(ukm, undefined, "ukm");
     if(hash.outputLen != 32)

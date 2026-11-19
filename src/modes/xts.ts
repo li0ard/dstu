@@ -1,28 +1,11 @@
-import { abytes, concatBytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { assertKalyna, getGf2mReductionBytes, xorBytes } from "../utils.js";
+import { abytes, concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { assertKalyna, xorBytes } from "../utils.js";
 import type { Cipher, DiskMode } from "../types.js";
+import { gf2mDouble } from "../gf/index.js";
 
 /** XEX Tweakable Block Ciphertext Stealing (XTS) */
 export const xts = (cipher: Cipher): DiskMode => {
     assertKalyna(cipher);
-    const gf2mDouble = (a: TArg<Uint8Array>): TRet<Uint8Array> => {
-        const result = copyBytes(a);
-        const reductionBytes = getGf2mReductionBytes(cipher.blockSize);
-
-        let carry = 0;
-        for (let j = 0; j < cipher.blockSize; j++) {
-            const nextCarry = (result[j] & 0x80) ? 1 : 0;
-            result[j] = ((result[j] << 1) & 0xFF) | carry;
-            carry = nextCarry;
-        }
-
-        if (carry) {
-            for (let j = 0; j < reductionBytes.length; j++)
-                if (j < cipher.blockSize) result[j] ^= reductionBytes[j];
-        }
-
-        return result;
-    }
 
     const transform = (
         transform: (block: TArg<Uint8Array>) => TRet<Uint8Array>,
@@ -54,12 +37,12 @@ export const xts = (cipher: Cipher): DiskMode => {
 
             if (r === 0) {
                 for (let off = 0; off < plaintext.length; off += cipher.blockSize) {
-                    gamma.set(gf2mDouble(gamma));
+                    gamma.set(gf2mDouble(cipher.blockSize, gamma));
                     buffer.set(transform(encrypt, buffer.subarray(off, off + cipher.blockSize), gamma), off);
                 }
             } else {
                 for (let i = 0; i < k; i++) {
-                    gamma.set(gf2mDouble(gamma));
+                    gamma.set(gf2mDouble(cipher.blockSize, gamma));
                     const off = i * cipher.blockSize;
                     buffer.set(transform(encrypt, buffer.subarray(off, off + cipher.blockSize), gamma), off);
                 }
@@ -72,7 +55,7 @@ export const xts = (cipher: Cipher): DiskMode => {
                     scratch.subarray(r)
                 );
 
-                const encrypted = transform(encrypt, combined, gf2mDouble(gamma));
+                const encrypted = transform(encrypt, combined, gf2mDouble(cipher.blockSize, gamma));
                 buffer.set(encrypted, last_off);
                 buffer.set(scratch.subarray(0, r), tail_off);
             }
@@ -94,18 +77,18 @@ export const xts = (cipher: Cipher): DiskMode => {
 
             if (r === 0) {
                 for (let off = 0; off < ciphertext.length; off += cipher.blockSize) {
-                    gamma.set(gf2mDouble(gamma));
+                    gamma.set(gf2mDouble(cipher.blockSize, gamma));
                     buffer.set(transform(decrypt, buffer.subarray(off, off + cipher.blockSize), gamma), off);
                 }
             } else {
                 for (let i = 0; i < k - 1; i++) {
-                    gamma.set(gf2mDouble(gamma));
+                    gamma.set(gf2mDouble(cipher.blockSize, gamma));
                     const off = i * cipher.blockSize;
                     buffer.set(transform(decrypt, buffer.subarray(off, off + cipher.blockSize), gamma), off);
                 }
 
-                gamma.set(gf2mDouble(gamma));
-                const gamma_k_plus_1 = gf2mDouble(gamma);
+                gamma.set(gf2mDouble(cipher.blockSize, gamma));
+                const gamma_k_plus_1 = gf2mDouble(cipher.blockSize, gamma);
 
                 const last_off = (k - 1) * cipher.blockSize;
                 const tail_off = k * cipher.blockSize;

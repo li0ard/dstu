@@ -11,6 +11,17 @@ const MDS_MATRIX = new BigUint64Array([
     0x0105010806070401n,
 ]);
 
+const MDS_MATRIX_inv = new BigUint64Array([
+    0xAD9576A82F49D7CAn,
+    0xCAAD9576A82F49D7n,
+    0xD7CAAD9576A82F49n,
+    0x49D7CAAD9576A82Fn,
+    0x2F49D7CAAD9576A8n,
+    0xA82F49D7CAAD9576n,
+    0x76A82F49D7CAAD95n,
+    0x9576A82F49D7CAADn,
+]);
+
 const gf_multiply = (x: number, y: number): number => {
     let r = 0, i = 0;
     while (i < 8) {
@@ -24,7 +35,7 @@ const gf_multiply = (x: number, y: number): number => {
     return r & 0xFF;
 }
 
-const generate_t_table = (sboxes: Readonly<Uint8Array[]>) => {
+const generate_t_table = (mds: BigUint64Array, sboxes: Readonly<Uint8Array[]>) => {
     const table: BigUint64Array[] = [];
 
     for (let row = 0; row < 8; row++) {
@@ -34,7 +45,7 @@ const generate_t_table = (sboxes: Readonly<Uint8Array[]>) => {
 
             const out: number[] = new Array(8);
             for (let outRow = 0; outRow < 8; outRow++) {
-                const mdsCoef = Number((MDS_MATRIX[outRow] >> BigInt(8 * (7 - row))) & 0xFFn);
+                const mdsCoef = Number((mds[outRow] >> BigInt(8 * (7 - row))) & 0xFFn);
                 out[outRow] = gf_multiply(mdsCoef, s);
             }
 
@@ -54,4 +65,4 @@ const generate_t_table = (sboxes: Readonly<Uint8Array[]>) => {
     return table;
 }
 
-console.log(generate_t_table(S));
+console.log(generate_t_table(MDS_MATRIX, S));

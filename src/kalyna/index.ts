@@ -1,31 +1,52 @@
 import { abool, abytes, anumber, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { IS, IT, T, S } from "../const.js";
-import { bytesToUint64sLE, uint64sToBytesLE, byte } from "../utils.js";
+import { T, S, MDS_MATRIX_inv, genTable } from "../const.js";
 import type { Cipher } from "../types.js";
+import { _U32, u32ToBytesLE, bytesToU32LE } from "../utils.js";
 
-const swap_block = (k: TArg<BigUint64Array>, N: number) => {
-    if (N <= 1) return;
-    const t = k[0];
-    for (let i = 0; i < N - 1; i++) k[i] = k[i + 1];
-    k[N - 1] = t;
+const swap_block = (k: Uint32Array, words: number) => {
+    if (words <= 1) return;
+    const l = k[0], h = k[1];
+    k.copyWithin(0, 2, words * 2);
+    k[words * 2 - 2] = l;
+    k[words * 2 - 1] = h;
 }
 
 export const column = (
-    x: TArg<BigUint64Array>, i: number, N: number,
-    c1: number, c2: number, c3: number,
-    c4: number, c5: number, c6: number, c7: number,
-    table: Readonly<TArg<BigUint64Array>[]> = T,
+    x: Uint32Array, i: number, N: number,
+    offs: ArrayLike<number>,
+    out: Uint32Array, o: number,
+    table: Uint32Array[] = T,
     sign: 1 | -1 = -1
-): bigint => (
-    table[0][byte(x[(i + N) % N])] ^
-    table[1][byte(x[(i + sign * c1 + N) % N] >> 8n)] ^
-    table[2][byte(x[(i + sign * c2 + N) % N] >> 16n)] ^
-    table[3][byte(x[(i + sign * c3 + N) % N] >> 24n)] ^
-    table[4][byte(x[(i + sign * c4 + N) % N] >> 32n)] ^
-    table[5][byte(x[(i + sign * c5 + N) % N] >> 40n)] ^
-    table[6][byte(x[(i + sign * c6 + N) % N] >> 48n)] ^
-    table[7][byte(x[(i + sign * c7 + N) % N] >> 56n)]
-);
+) => {
+    const m = N - 1;
+    const j0 = ((i + sign * offs[0]) & m) << 1,
+        j1 = ((i + sign * offs[1]) & m) << 1,
+        j2 = ((i + sign * offs[2]) & m) << 1,
+        j3 = ((i + sign * offs[3]) & m) << 1,
+        j4 = (((i + sign * offs[4]) & m) << 1) | 1,
+        j5 = (((i + sign * offs[5]) & m) << 1) | 1,
+        j6 = (((i + sign * offs[6]) & m) << 1) | 1,
+        j7 = (((i + sign * offs[7]) & m) << 1) | 1;
+
+    const b0 = (x[j0] & 0xFF) << 1,
+        b1 = ((x[j1] >>> 8) & 0xFF) << 1,
+        b2 = ((x[j2] >>> 16) & 0xFF) << 1,
+        b3 = (x[j3] >>> 24) << 1,
+        b4 = (x[j4] & 0xFF) << 1,
+        b5 = ((x[j5] >>> 8) & 0xFF) << 1,
+        b6 = ((x[j6] >>> 16) & 0xFF) << 1,
+        b7 = (x[j7] >>> 24) << 1;
+
+    const t0 = table[0], t1 = table[1], t2 = table[2], t3 = table[3],
+        t4 = table[4], t5 = table[5], t6 = table[6], t7 = table[7];
+
+    out[o] = t0[b0] ^ t1[b1] ^ t2[b2] ^ t3[b3] ^ t4[b4] ^ t5[b5] ^ t6[b6] ^ t7[b7];
+    out[o + 1] = t0[b0 | 1] ^ t1[b1 | 1] ^ t2[b2 | 1] ^ t3[b3 | 1] ^
+        t4[b4 | 1] ^ t5[b5 | 1] ^ t6[b6 | 1] ^ t7[b7 | 1];
+};
+
+const IS = /* @__PURE__ */ S.map(i => i.map((_, j) => i.indexOf(j))),
+    IT = /* @__PURE__ */ genTable(MDS_MATRIX_inv, IS);
 
 export abstract class Kalyna implements Cipher {
     /** Block size */
@@ -33,8 +54,8 @@ export abstract class Kalyna implements Cipher {
     /** Key size */
     readonly keySize: number;
 
-    private erk!: TArg<BigUint64Array>;
-    private drk!: TArg<BigUint64Array>;
+    private erk!: Uint32Array;
+    private drk!: Uint32Array;
     private readonly numRounds: number;
     private readonly glOffset: number;
     private wordOffsets: number[];
@@ -56,163 +77,198 @@ export abstract class Kalyna implements Cipher {
         this.expandKey(key);
     }
 
-    private expandKey(key: TArg<Uint8Array>) {
-        const log2N = Math.log2(this.N),
+    private expandKey(key: Uint8Array) {
+        const N2 = this.N * 2,
+            log2N = Math.log2(this.N),
             isDoubleKey = (this.keySize === this.blockSize * 2),
             R = isDoubleKey ? (6 + 2 * log2N) : (4 + 2 * log2N),
-            rk = new BigUint64Array(R * this.N * 2),
-            ks = new BigUint64Array(this.N), ksc = new BigUint64Array(this.N),
-            t1 = new BigUint64Array(this.N), t2 = new BigUint64Array(this.N);
-        t1[0] = isDoubleKey ? BigInt(2 * this.N + 2 * log2N + 1) : BigInt(2 * this.N + 1);
+            rk = new Uint32Array(R * this.N * 4),
+            ks = new Uint32Array(N2), ksc = new Uint32Array(N2),
+            t1 = new Uint32Array(N2), t2 = new Uint32Array(N2);
+        t1[0] = isDoubleKey ? (N2 + 2 * log2N + 1) : (N2 + 1);
 
-        const keys = bytesToUint64sLE(key),
-            _0 = new BigUint64Array(this.N);
-        const k = new BigUint64Array(isDoubleKey ? this.N * 2 : this.N);
+        const keys = bytesToU32LE(key),
+            _0 = new Uint32Array(N2);
+        const k = new Uint32Array(isDoubleKey ? N2 * 2 : N2);
         if (isDoubleKey) {
-            const ka = keys.subarray(0, this.N);
+            const ka = keys.subarray(0, N2);
             this.addkey(t1, t2, ka);
-            this.G(t2, t1, keys.subarray(this.N));
+            this.G(t2, t1, keys.subarray(N2));
             this.GL(t1, t2, ka);
             this.G(t2, ks, _0);
             k.set(keys);
         } else {
-            k.set(keys.subarray(0, this.N));
+            k.set(keys.subarray(0, N2));
             this.addkey(t1, t2, keys);
             this.G(t2, t1, keys);
             this.GL(t1, t2, keys);
             this.G(t2, ks, _0);
         }
 
-        let constant = 0x0001000100010001n;
+        let cl = 0x00010001, ch = 0x00010001;
         for (let i = 0; i < R; i++) {
-            const offset = i * (this.N * 2);
-
+            const offset = i * N2;
             if (i > 0) {
                 if (!isDoubleKey) swap_block(k, this.N);
-                else if (i % 2 === 0) swap_block(k, this.N * 2);
+                else if (i % 2 === 0) swap_block(k, N2);
             }
 
             const keySource = isDoubleKey
-                ? (i % 2 === 0 ? k.subarray(0, this.N) : k.subarray(this.N))
+                ? (i % 2 === 0 ? k.subarray(0, N2) : k.subarray(N2))
                 : k;
-            for(let i = 0; i < this.N; i++) ksc[i] = ks[i] + constant;
+            for (let j = 0; j < N2; j += 2) {
+                const lo = ks[j] + cl;
+                ksc[j] = lo;
+                ksc[j + 1] = ks[j + 1] + ch + (lo > _U32 ? 1 : 0);
+            }
             this.addkey(keySource, t2, ksc);
             this.G(t2, t1, ksc);
-            this.GL(t1, rk.subarray(offset), ksc);
+            this.GL(t1, rk.subarray(offset * 2), ksc);
 
-            if (i < R - 1) this.makeOddKey(rk.subarray(offset), rk.subarray(offset + this.N));
-            constant <<= 1n;
+            if (i < R - 1)
+                this.makeOddKey(rk.subarray(offset * 2), rk.subarray((offset + this.N) * 2));
+
+            ch = ((ch << 1) | (cl >>> 31)) >>> 0;
+            cl = (cl << 1) >>> 0;
         }
 
         this.erk = rk.slice();
         for (let i = ((R * 2 - 3) * this.N); i > 0; i -= this.N)
-            this.IMC(rk.subarray(i));
+            this.IMC(rk.subarray(i * 2));
         this.drk = rk;
     }
 
-    private makeOddKey(evenkey: TArg<BigUint64Array>, oddkey: TArg<BigUint64Array>) {
+    private makeOddKey(evenkey: Uint32Array, oddkey: Uint32Array) {
         const offset = 2 * this.N + 3,
-            evenkeys = uint64sToBytesLE(evenkey),
-            oddkeys = uint64sToBytesLE(oddkey);
-        oddkeys.set(evenkeys.subarray(offset, this.blockSize));
-        oddkeys.set(evenkeys.subarray(0, offset), this.blockSize - offset);
-        oddkey.set(bytesToUint64sLE(oddkeys));
+            ev = u32ToBytesLE(evenkey.subarray(0, this.N * 2)),
+            od = new Uint8Array(this.blockSize);
+        od.set(ev.subarray(offset, this.blockSize));
+        od.set(ev.subarray(0, offset), this.blockSize - offset);
+        oddkey.set(bytesToU32LE(od));
     }
 
-    private addkey(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, k: TArg<BigUint64Array>) {
-        for (let i = 0; i < this.N; i++) y[i] = x[i] + k[i];
+    private addkey(x: Uint32Array, y: Uint32Array, k: Uint32Array, ko = 0) {
+        for (let j = 0, e = this.N * 2; j < e; j += 2) {
+            const lo = x[j] + k[ko + j];
+            y[j + 1] = x[j + 1] + k[ko + j + 1] + (lo > _U32 ? 1 : 0);
+            y[j] = lo;
+        }
     }
 
-    private subkey(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, k: TArg<BigUint64Array>) {
-        for (let i = 0; i < this.N; i++) y[i] = x[i] - k[i];
+    private subkey(x: Uint32Array, y: Uint32Array, k: Uint32Array, ko = 0) {
+        for (let j = 0, e = this.N * 2; j < e; j += 2) {
+            const lo = x[j] - k[ko + j];
+            y[j + 1] = x[j + 1] - k[ko + j + 1] - (lo < 0 ? 1 : 0);
+            y[j] = lo;
+        }
     }
 
-    private column(x: TArg<BigUint64Array>, i: number): bigint {
-        return column(
-            x, i, this.N,
-            this.wordOffsets[1], this.wordOffsets[2], this.wordOffsets[3],
-            this.wordOffsets[4], this.wordOffsets[5], this.wordOffsets[6], this.wordOffsets[7]
-        );
-    }
-
-    private invColumn(x: TArg<BigUint64Array>, i: number): bigint {
-        return column(
-            x, i, this.N,
-            this.wordOffsets[1], this.wordOffsets[2], this.wordOffsets[3],
-            this.wordOffsets[4], this.wordOffsets[5], this.wordOffsets[6], this.wordOffsets[7],
-            IT, 1
-        );
-    }
-
-    private G(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, k: TArg<BigUint64Array>) {
-        for (let i = 0; i < this.N; i++) y[i] = k[i] ^ this.column(x, i);
-    }
-
-    private GL(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, k: TArg<BigUint64Array>) {
-        for (let i = 0; i < this.N; i++) y[i] = k[i] + this.column(x, i);
-    }
-
-    private IMC(x: TArg<BigUint64Array>) {
-        for (let i = 0; i < this.N; i++) x[i] = IT[0][S[0][byte(x[i])]] ^
-            IT[1][S[1][byte(x[i] >> 8n)]] ^
-            IT[2][S[2][byte(x[i] >> 16n)]] ^
-            IT[3][S[3][byte(x[i] >> 24n)]] ^
-            IT[4][S[0][byte(x[i] >> 32n)]] ^
-            IT[5][S[1][byte(x[i] >> 40n)]] ^
-            IT[6][S[2][byte(x[i] >> 48n)]] ^
-            IT[7][S[3][byte(x[i] >> 56n)]];
-    }
-
-    private IG(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, k: TArg<BigUint64Array>) {
-        for (let i = 0; i < this.N; i++) y[i] = k[i] ^ this.invColumn(x, i);
-    }
-
-    private IGL(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>) {
+    private G(x: Uint32Array, y: Uint32Array, k: Uint32Array, ko = 0) {
         for (let i = 0; i < this.N; i++) {
-            const result = BigInt(IS[0][byte(x[i % this.N])]) ^
-                (BigInt(IS[1][byte(x[(i + this.wordOffsets[1]) % this.N] >> 8n)]) << 8n) ^
-                (BigInt(IS[2][byte(x[(i + this.wordOffsets[2]) % this.N] >> 16n)]) << 16n) ^
-                (BigInt(IS[3][byte(x[(i + this.wordOffsets[3]) % this.N] >> 24n)]) << 24n) ^
-                (BigInt(IS[0][byte(x[(i + this.wordOffsets[4]) % this.N] >> 32n)]) << 32n) ^
-                (BigInt(IS[1][byte(x[(i + this.wordOffsets[5]) % this.N] >> 40n)]) << 40n) ^
-                (BigInt(IS[2][byte(x[(i + this.wordOffsets[6]) % this.N] >> 48n)]) << 48n) ^
-                (BigInt(IS[3][byte(x[(i + this.wordOffsets[7]) % this.N] >> 56n)]) << 56n);
+            const j = i << 1;
+            column(x, i, this.N, this.wordOffsets, y, j);
+            y[j] ^= k[ko + j];
+            y[j + 1] ^= k[ko + j + 1];
+        }
+    }
 
-            y[i] = result - this.drk[i];
+    private GL(x: Uint32Array, y: Uint32Array, k: Uint32Array, ko = 0) {
+        for (let i = 0; i < this.N; i++) {
+            const j = i << 1;
+            column(x, i, this.N, this.wordOffsets, y, j);
+            const lo = y[j] + k[ko + j];
+            y[j + 1] += k[ko + j + 1] + (lo > _U32 ? 1 : 0);
+            y[j] = lo;
+        }
+    }
+
+    private IG(x: Uint32Array, y: Uint32Array, k: Uint32Array, ko = 0) {
+        for (let i = 0; i < this.N; i++) {
+            const j = i << 1;
+            column(x, i, this.N, this.wordOffsets, y, j, IT, 1);
+            y[j] ^= k[ko + j];
+            y[j + 1] ^= k[ko + j + 1];
+        }
+    }
+
+    private IMC(x: Uint32Array) {
+        const [s0, s1, s2, s3] = S;
+        const [i0, i1, i2, i3, i4, i5, i6, i7] = IT;
+        for (let j = 0, e = this.N * 2; j < e; j += 2) {
+            const l = x[j], h = x[j + 1];
+            const a0 = s0[l & 0xFF] << 1,
+                a1 = s1[(l >>> 8) & 0xFF] << 1,
+                a2 = s2[(l >>> 16) & 0xFF] << 1,
+                a3 = s3[l >>> 24] << 1,
+                a4 = s0[h & 0xFF] << 1,
+                a5 = s1[(h >>> 8) & 0xFF] << 1,
+                a6 = s2[(h >>> 16) & 0xFF] << 1,
+                a7 = s3[h >>> 24] << 1;
+            x[j] = i0[a0] ^ i1[a1] ^ i2[a2] ^ i3[a3] ^ i4[a4] ^ i5[a5] ^ i6[a6] ^ i7[a7];
+            x[j + 1] = i0[a0 | 1] ^ i1[a1 | 1] ^ i2[a2 | 1] ^ i3[a3 | 1] ^
+                i4[a4 | 1] ^ i5[a5 | 1] ^ i6[a6 | 1] ^ i7[a7 | 1];
+        }
+    }
+
+    private IGL(x: Uint32Array, y: Uint32Array) {
+        const m = this.N - 1;
+        const [is0, is1, is2, is3] = IS;
+        for (let i = 0; i < this.N; i++) {
+            const j0 = ((i + this.wordOffsets[0]) & m) << 1,
+                j1 = ((i + this.wordOffsets[1]) & m) << 1,
+                j2 = ((i + this.wordOffsets[2]) & m) << 1,
+                j3 = ((i + this.wordOffsets[3]) & m) << 1,
+                j4 = (((i + this.wordOffsets[4]) & m) << 1) | 1,
+                j5 = (((i + this.wordOffsets[5]) & m) << 1) | 1,
+                j6 = (((i + this.wordOffsets[6]) & m) << 1) | 1,
+                j7 = (((i + this.wordOffsets[7]) & m) << 1) | 1;
+
+            const lo = is0[x[j0] & 0xFF] |
+                (is1[(x[j1] >>> 8) & 0xFF] << 8) |
+                (is2[(x[j2] >>> 16) & 0xFF] << 16) |
+                (is3[x[j3] >>> 24] << 24);
+            const hi = is0[x[j4] & 0xFF] |
+                (is1[(x[j5] >>> 8) & 0xFF] << 8) |
+                (is2[(x[j6] >>> 16) & 0xFF] << 16) |
+                (is3[x[j7] >>> 24] << 24);
+
+            const d = i << 1, l = (lo >>> 0) - this.drk[d];
+            y[d + 1] = (hi >>> 0) - this.drk[d + 1] - (l < 0 ? 1 : 0);
+            y[d] = l;
         }
     }
 
     /** Encrypt block */
     encrypt(block: TArg<Uint8Array>): TRet<Uint8Array> {
         abytes(block, this.blockSize, "block");
-        const t1 = new BigUint64Array(this.N), t2 = new BigUint64Array(this.N);
-        this.addkey(bytesToUint64sLE(block), t1, this.erk);
+        const t1 = new Uint32Array(this.N * 2), t2 = new Uint32Array(this.N * 2);
+        this.addkey(bytesToU32LE(block), t1, this.erk);
 
         for (let i = 0; i < this.numRounds; i++) {
-            const roundKey = this.erk.subarray(this.N + i * this.N);
-            if (i % 2 === 0) this.G(t1, t2, roundKey);
-            else this.G(t2, t1, roundKey);
+            const ko = (this.N + i * this.N) * 2;
+            if (i % 2 === 0) this.G(t1, t2, this.erk, ko);
+            else this.G(t2, t1, this.erk, ko);
         }
 
-        this.GL(t2, t1, this.erk.subarray(this.glOffset));
-        return uint64sToBytesLE(t1);
+        this.GL(t2, t1, this.erk, this.glOffset * 2);
+        return u32ToBytesLE(t1) as TRet<Uint8Array>;
     }
 
     /** Decrypt block */
     decrypt(block: TArg<Uint8Array>): TRet<Uint8Array> {
         abytes(block, this.blockSize, "block");
-        const t1 = new BigUint64Array(this.N), t2 = new BigUint64Array(this.N);
-        this.subkey(bytesToUint64sLE(block), t1, this.drk.subarray(this.glOffset));
+        const t1 = new Uint32Array(this.N * 2), t2 = new Uint32Array(this.N * 2);
+        this.subkey(bytesToU32LE(block), t1, this.drk, this.glOffset * 2);
         this.IMC(t1);
 
         for (let i = 0; i < this.numRounds; i++) {
-            const roundKey = this.drk.subarray(this.glOffset - this.N - i * this.N);
-            if (i % 2 === 0) this.IG(t1, t2, roundKey);
-            else this.IG(t2, t1, roundKey);
+            const ko = (this.glOffset - this.N - i * this.N) * 2;
+            if (i % 2 === 0) this.IG(t1, t2, this.drk, ko);
+            else this.IG(t2, t1, this.drk, ko);
         }
 
         this.IGL(t2, t1);
-        return uint64sToBytesLE(t1);
+        return u32ToBytesLE(t1) as TRet<Uint8Array>;
     }
 }
 

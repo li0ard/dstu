@@ -1,16 +1,14 @@
-import { abytes, ahash, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { uint64sToBytesLE } from "../utils.js";
+import { abytes, aexists, ahash, aoutput, clean, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { kupyna256, type _Kupyna256, kupyna384, type _Kupyna384, kupyna512, type _Kupyna512 } from "./index.js";
-import { numberToBytesLE } from "@noble/curves/utils.js";
 
-const dpad: Readonly<Uint8Array> = numberToBytesLE(128, 128);
+const dpad = /* @__PURE__ */ Uint8Array.from({ length: 128 }, (_, i) => i === 0 ? 0x80 : 0);
 
-const kpad32: Readonly<Uint8Array> = new Uint8Array([
+const kpad32 = /* @__PURE__ */ new Uint8Array([
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 ]);
 
-const kpad48: Readonly<Uint8Array> = new Uint8Array([
+const kpad48 = /* @__PURE__ */ new Uint8Array([
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -18,44 +16,58 @@ const kpad48: Readonly<Uint8Array> = new Uint8Array([
     0x00, 0x00, 0x00, 0x00, 0x80, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 ]);
 
-const kpad64: Readonly<Uint8Array> = new Uint8Array([
+const kpad64 = /* @__PURE__ */ new Uint8Array([
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 ]);
 
-abstract class KupynaKMAC<T, H extends Hash<H>> implements Hash<KupynaKMAC<T,H>> {
+abstract class KupynaKMAC<T extends Hash<T>> implements Hash<KupynaKMAC<T>> {
     readonly outputLen: number;
     readonly blockLen: number;
     readonly canXOF = false;
-    protected readonly threshold: bigint;
-    protected h: H;
+    protected readonly threshold: number;
+    protected h: T;
     protected ik: Uint8Array;
-    protected len: bigint;
+    protected len = 0;
+    protected finished = false;
+    protected destroyed = false;
+    private readonly tail = new Uint8Array(12);
 
-    constructor(hash: CHash<H>, kpad: TArg<Uint8Array>, key: TArg<Uint8Array>) {
+    constructor(hash: CHash<T>, kpad: TArg<Uint8Array>, key: TArg<Uint8Array>) {
         ahash(hash);
         abytes(kpad, undefined, "kpad");
         abytes(key, undefined, "key");
-        this.len = 0n;
         this.h = hash.create();
         this.outputLen = this.h.outputLen;
         this.blockLen = this.h.blockLen;
-        if(key.length != this.h.outputLen) throw new Error("Invalid key length");
+        if (key.length !== this.h.outputLen) throw new Error("Invalid key length");
         this.h.update(key);
         this.h.update(kpad);
         this.ik = new Uint8Array(key.length);
         for (let i = 0; i < key.length; i++) this.ik[i] = ~key[i] & 0xFF;
-        this.threshold = BigInt(this.blockLen - 12);
+        this.threshold = this.blockLen - 12;
     }
 
-    abstract clone(): KupynaKMAC<T,H>;
-    abstract _cloneInto(to?: KupynaKMAC<T,H>): KupynaKMAC<T,H>;
+    clone(): KupynaKMAC<T> { return this._cloneInto(); }
+    _cloneInto(to?: KupynaKMAC<T>): KupynaKMAC<T> {
+        const key = new Uint8Array(this.ik.length);
+        for (let i = 0; i < key.length; i++) key[i] = ~this.ik[i] & 0xFF;
+
+        to ||= new (this.constructor as any)(key) as KupynaKMAC<T>;
+        to.h = this.h.clone();
+        to.len = this.len;
+        to.ik.set(this.ik);
+        to.finished = this.finished;
+        to.destroyed = this.destroyed;
+        return to;
+    }
 
     update(data: TArg<Uint8Array>): this {
+        aexists(this);
         abytes(data, undefined, "data");
-        this.len += BigInt(data.length);
+        this.len += data.length;
         this.h.update(data);
         return this;
     }
@@ -63,65 +75,54 @@ abstract class KupynaKMAC<T, H extends Hash<H>> implements Hash<KupynaKMAC<T,H>>
     digest(): TRet<Uint8Array> {
         const buffer = new Uint8Array(this.outputLen);
         this.digestInto(buffer);
-
         return buffer;
     }
 
     digestInto(buffer: TArg<Uint8Array>) {
-        if(buffer.length != this.outputLen) throw new Error("digestInto: Invalid buffer length");
-        let n = this.len, pad_size: bigint;
-        if(n < this.threshold) pad_size = this.threshold - 1n - n;
-        else pad_size = (BigInt(this.blockLen) - 1n) - ((n - this.threshold) % BigInt(this.blockLen));
-        n *= 8n;
+        aexists(this);
+        aoutput(buffer, this);
+        const { len, blockLen, threshold, tail } = this;
 
-        this.h.update(dpad.subarray(0, Number(pad_size + 1n)));
-        this.h.update(uint64sToBytesLE(new BigUint64Array([n])));
-        this.h.update(dpad.subarray(16, 20));
+        const zeros = (((threshold - 1 - len) % blockLen) + blockLen) % blockLen;
+        this.h.update(dpad.subarray(0, zeros + 1));
+
+        const lo = (len << 3) >>> 0, hi = Math.floor(len / 2 ** 29);
+        tail[0] = lo;
+        tail[1] = lo >>> 8;
+        tail[2] = lo >>> 16;
+        tail[3] = lo >>> 24;
+        tail[4] = hi;
+        tail[5] = hi >>> 8;
+        tail[6] = hi >>> 16;
+        tail[7] = hi >>> 24;
+        this.h.update(tail);
+
         this.h.update(this.ik);
         this.h.digestInto(buffer);
+        this.finished = true;
         this.destroy();
     }
 
-    destroy() { this.h.destroy(); }
+    destroy() {
+        this.destroyed = true;
+        this.h.destroy();
+        clean(this.ik, this.tail);
+    }
 }
 
 /** Kupyna KMAC (256 version) */
-export class KupynaKMAC256 extends KupynaKMAC<KupynaKMAC256, _Kupyna256> {
-    constructor(private key: TArg<Uint8Array>) { super(kupyna256, kpad32, key); }
-    _cloneInto(to?: KupynaKMAC256): KupynaKMAC256 {
-        to ||= new KupynaKMAC256(this.key);
-        to.h = this.h.clone();
-        to.len = this.len;
-        to.ik.set(this.ik);
-        return to;
-    }
-    clone(): KupynaKMAC256 { return this._cloneInto(); }
+export class KupynaKMAC256 extends KupynaKMAC<_Kupyna256> {
+    constructor(key: TArg<Uint8Array>) { super(kupyna256, kpad32, key); }
 }
 
 /** Kupyna KMAC (384 bit version) */
-export class KupynaKMAC384 extends KupynaKMAC<KupynaKMAC512, _Kupyna384> {
-    constructor(private key: TArg<Uint8Array>) { super(kupyna384, kpad48, key); }
-    _cloneInto(to?: KupynaKMAC384): KupynaKMAC384 {
-        to ||= new KupynaKMAC384(this.key);
-        to.h = this.h.clone();
-        to.len = this.len;
-        to.ik.set(this.ik);
-        return to;
-    }
-    clone(): KupynaKMAC384 { return this._cloneInto(); }
+export class KupynaKMAC384 extends KupynaKMAC<_Kupyna384> {
+    constructor(key: TArg<Uint8Array>) { super(kupyna384, kpad48, key); }
 }
 
 /** Kupyna KMAC (512 bit version) */
-export class KupynaKMAC512 extends KupynaKMAC<KupynaKMAC512, _Kupyna512> {
-    constructor(private key: TArg<Uint8Array>) { super(kupyna512, kpad64, key); }
-    _cloneInto(to?: KupynaKMAC512): KupynaKMAC512 {
-        to ||= new KupynaKMAC512(this.key);
-        to.h = this.h.clone();
-        to.len = this.len;
-        to.ik.set(this.ik);
-        return to;
-    }
-    clone(): KupynaKMAC512 { return this._cloneInto(); }
+export class KupynaKMAC512 extends KupynaKMAC<_Kupyna512> {
+    constructor(key: TArg<Uint8Array>) { super(kupyna512, kpad64, key); }
 }
 
 /** Kupyna KMAC (256 version) */

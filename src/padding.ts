@@ -1,8 +1,6 @@
-import { abytes, anumber, type TArg, type TRet } from "@noble/hashes/utils.js";
+import type { TArg, TRet } from "@noble/hashes/utils.js";
 
 export const pad = (data: TArg<Uint8Array>, blockSize: number): TRet<Uint8Array> => {
-    abytes(data, undefined, "data");
-    anumber(blockSize, "blockSize");
     const remainder = data.length % blockSize;
     if (remainder === 0) return data as TRet<Uint8Array>;
     const padLength = blockSize - remainder;
@@ -15,8 +13,6 @@ export const pad = (data: TArg<Uint8Array>, blockSize: number): TRet<Uint8Array>
 }
 
 export const unpad = (paddedData: TArg<Uint8Array>, blockSize: number): TRet<Uint8Array> => {
-    abytes(paddedData, undefined, "paddedData");
-    anumber(blockSize, "blockSize");
     if (paddedData.length % blockSize !== 0)
         throw new Error("Padded data length must be multiple of block size");
 

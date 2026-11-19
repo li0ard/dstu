@@ -1,161 +1,145 @@
-import { abytes, ahash, anumber, aoutput, createHasher, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { bytesToUint64sLE, uint64sToBytesLE } from "../utils.js";
+import { abytes, aexists, ahash, aoutput, clean, createHasher, createView, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { HashMD } from "@noble/hashes/_md.js";
 import { column } from "../kalyna/index.js";
-import { numberToBytesLE } from "@noble/curves/utils.js";
+import { _U32 } from "../utils.js";
 
-const r = 0x00F0F0F0F0F0F0F3n;
+const R_LO = 0xF0F0F0F3,
+    R_HI = 0x00F0F0F0;
 
-abstract class Kupyna<T extends Kupyna<T>> implements Hash<Kupyna<T>> {
-    readonly outputLen: number;
-    readonly canXOF = false;
-
+abstract class Kupyna<T extends Kupyna<T>> extends HashMD<T> {
     private readonly rounds: number;
     private readonly stSize: number;
-    private readonly threshold: number;
-    protected s!: BigUint64Array;
-    protected x!: Uint8Array;
-    protected nx!: number;
-    protected len!: bigint;
+    private readonly offs: number[];
+    protected s: Uint32Array;
 
-    constructor(public readonly blockLen: number) {
-        anumber(blockLen, "blockLen");
-        this.stSize = (blockLen / 2) / 4;
-        this.threshold = blockLen - 12;
+    private readonly m: Uint32Array;
+    private readonly ap: Uint32Array;
+    private readonly aq: Uint32Array;
+    private readonly tmp: Uint32Array;
+
+    constructor(blockLen: number) {
+        super(blockLen, blockLen / 2, 12, true);
+        this.stSize = blockLen >>> 3;
         this.rounds = 4 * Math.log2(blockLen) - 14;
-        this.outputLen = blockLen / 2;
+        this.offs = [0, 1, 2, 3, 4, 5, 6, blockLen === 64 ? 7 : 11];
 
-        this.s = new BigUint64Array(this.stSize);
-        this.x = new Uint8Array(this.blockLen);
-        this.nx = 0;
-        this.len = 0n;
+        const w = this.stSize * 2;
+        this.s = new Uint32Array(w);
+        this.m = new Uint32Array(w);
+        this.ap = new Uint32Array(w);
+        this.aq = new Uint32Array(w);
+        this.tmp = new Uint32Array(w);
+        this.s[0] = blockLen;
+    }
 
-        this.s[0] = BigInt(this.blockLen);
+    // Unused
+    protected get(): number[] { return []; }
+    protected set(..._args: number[]) { }
+
+    protected process(buf: DataView, offset: number = 0) {
+        for (let i = 0; i < this.m.length; i++)
+            this.m[i] = buf.getUint32(offset + (i << 2), true);
+
+        for (let i = 0; i < this.s.length; i++) {
+            this.ap[i] = this.s[i] ^ this.m[i];
+            this.aq[i] = this.m[i];
+        }
+
+        for (let r = 0; r < this.rounds; r += 2) {
+            this.P(this.ap, this.tmp, r);
+            this.Q(this.aq, this.tmp, r);
+        }
+
+        for (let i = 0; i < this.s.length; i++) this.s[i] ^= this.ap[i] ^ this.aq[i];
+    }
+
+    protected roundClean() {
+        clean(this.m, this.ap, this.aq, this.tmp);
     }
 
     destroy() {
-        this.s[0] = BigInt(this.blockLen);
-        this.s.fill(0n, 1);
-        this.x.fill(0);
-        this.nx = 0;
-        this.len = 0n;
+        this.destroyed = true;
+        clean(this.s, this.buffer);
+        this.roundClean();
     }
 
-    update(data: TArg<Uint8Array>): this {
-        abytes(data, undefined, "data");
-        this.len += BigInt(data.length);
-    
-        if (this.nx > 0) {
-            const n = Math.min(this.blockLen - this.nx, data.length);
-            this.x.set(data.subarray(0, n), this.nx);
-            this.nx += n;
-        
-            if (this.nx === this.blockLen) {
-                this.F(bytesToUint64sLE(this.x));
-                this.nx = 0;
-            }
-        
-            data = data.slice(n);
+    override digestInto(out: TArg<Uint8Array>) {
+        aexists(this);
+        aoutput(out, this);
+        this.finished = true;
+
+        const threshold = this.blockLen - 12;
+        let pos = this.pos;
+        this.buffer[pos++] = 0x80;
+        if (pos > threshold) {
+            this.buffer.fill(0, pos);
+            this.process(this.view);
+            pos = 0;
         }
-    
-        while (data.length >= this.blockLen) {
-            this.F(bytesToUint64sLE(data.subarray(0, this.blockLen)));
-            this.nx = 0;
-            data = data.slice(this.blockLen);
-        }
-    
-        if (data.length > 0) {
-            this.x.set(data, 0);
-            this.nx = data.length;
-        }
-    
-        return this;
-    }
-
-    digest(): TRet<Uint8Array> {
-        const buffer = new Uint8Array(this.outputLen);
-        this.digestInto(buffer);
-        return buffer;
-    }
-
-    digestInto(buffer: TArg<Uint8Array>) {
-        aoutput(buffer, this);
-        this.x[this.nx] = 0x80;
-        this.nx++;
-
-        const fillBytes = (start: number) => {
-            const available = this.x.length - start;
-            if (available > 0) this.x.fill(0, start, start + available);
-        };
-
-        if (this.nx > this.threshold) {
-            fillBytes(this.nx);
-            this.F(bytesToUint64sLE(this.x));
-            this.nx = 0;
-        }
-
-        fillBytes(this.nx);
-        this.x.set(numberToBytesLE(this.len * 8n, 12), this.threshold);
-        this.F(bytesToUint64sLE(this.x));
+        this.buffer.fill(0, pos);
+        const length = this.length * 8;
+        this.view.setUint32(threshold, length >>> 0, true);
+        this.view.setUint32(threshold + 4, (length / 2 ** 32) | 0, true);
+        this.process(this.view);
         this.outputTransform();
+        this.roundClean();
 
-        buffer.set(uint64sToBytesLE(this.s).subarray(this.outputLen));
-        this.destroy();
+        const oview = out === this.buffer ? this.view : createView(out);
+        for (let i = this.outputLen >>> 2, j = 0; i < this.s.length; i++, j += 4)
+            oview.setUint32(j, this.s[i], true);
     }
 
-    private column(x: TArg<BigUint64Array>, i: number): bigint {
-        return column(x, i, this.stSize, 1, 2, 3, 4, 5, 6, this.blockLen == 64 ? 7 : 11);
-    }
-
-    private G(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>) {
-        for (let i = 0; i < this.stSize; i++) y[i] = this.column(x, i);
-    }
-
-    private P(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, round: bigint) {
-        for(let i = 0n; i < BigInt(this.stSize); i++)
-            x[Number(i)] ^= (i << 4n) ^ round;
-
-        const r1 = round + 1n;
+    private G(x: Uint32Array, y: Uint32Array) {
         for (let i = 0; i < this.stSize; i++)
-            y[i] = this.column(x, i) ^ BigInt(i << 4) ^ r1;
+            column(x, i, this.stSize, this.offs, y, i << 1);
+    }
+
+    private P(x: Uint32Array, y: Uint32Array, round: number) {
+        for (let i = 0; i < this.stSize; i++) x[i << 1] ^= (i << 4) ^ round;
+
+        const r1 = round + 1;
+        for (let i = 0; i < this.stSize; i++) {
+            const j = i << 1;
+            column(x, i, this.stSize, this.offs, y, j);
+            y[j] ^= (i << 4) ^ r1;
+        }
         this.G(y, x);
     }
 
-    private Q(x: TArg<BigUint64Array>, y: TArg<BigUint64Array>, round: bigint) {
-        for(let j = 0n; j < BigInt(this.stSize); j++)
-            x[Number(j)] += r ^ ((((BigInt(this.stSize - 1) - j) * 0x10n) ^ round) << 56n);
+    private Q(x: Uint32Array, y: Uint32Array, round: number) {
+        for (let i = 0; i < this.stSize; i++) {
+            const j = i << 1,
+                tb = (((this.stSize - 1 - i) << 4) ^ round) & 0xFF,
+                ch = (R_HI ^ (tb << 24)) >>> 0,
+                lo = x[j] + R_LO;
+            x[j + 1] += ch + (lo > _U32 ? 1 : 0);
+            x[j] = lo;
+        }
 
-        const r1 = round + 1n;
-        for (let i = 0; i < this.stSize; i++)
-            y[i] = this.column(x, i) + (r ^ ((BigInt((this.stSize - 1 - i) * 16) ^ r1) << 56n));
+        const r1 = round + 1;
+        for (let i = 0; i < this.stSize; i++) {
+            const j = i << 1;
+            column(x, i, this.stSize, this.offs, y, j);
+            const tb = (((this.stSize - 1 - i) << 4) ^ r1) & 0xFF;
+            const ch = (R_HI ^ (tb << 24)) >>> 0;
+            const lo = y[j] + R_LO;
+            y[j + 1] += ch + (lo > _U32 ? 1 : 0);
+            y[j] = lo;
+        }
         this.G(y, x);
     }
 
     private outputTransform() {
-        const t1 = new BigUint64Array(this.s), t2 = new BigUint64Array(this.stSize);
-        for(let r = 0n; r < BigInt(this.rounds); r += 2n) this.P(t1, t2, r);
-        for(let column = 0; column < this.stSize; column++) this.s[column] ^= t1[column];
+        this.ap.set(this.s);
+        for (let r = 0; r < this.rounds; r += 2) this.P(this.ap, this.tmp, r);
+        for (let i = 0; i < this.s.length; i++) this.s[i] ^= this.ap[i];
     }
 
-    private F(b: TArg<BigUint64Array>) {
-        const AQ1 = new BigUint64Array(this.stSize),
-            AP1 = new BigUint64Array(this.stSize),
-            tmp = new BigUint64Array(this.stSize);
-        for(let column = 0; column < this.stSize; column++) {
-            AP1[column] = this.s[column] ^ b[column];
-            AQ1[column] = b[column];
-        }
-
-        for(let r = 0n; r < BigInt(this.rounds); r += 2n) {
-            this.P(AP1, tmp, r);
-            this.Q(AQ1, tmp, r);
-        }
-
-        for(let column = 0; column < this.stSize; column++)
-            this.s[column] ^= AP1[column] ^ AQ1[column];
+    _cloneInto(to?: T): T {
+        to ||= new (this.constructor as any)() as T;
+        to.s.set(this.s);
+        return this._cloneIntoMeta(to);
     }
-
-    clone(): Kupyna<T> { return this._cloneInto(); }
-    abstract _cloneInto(to?: Kupyna<T>): Kupyna<T>;
 }
 
 abstract class KupynaDerived<T extends Kupyna<T>> implements Hash<KupynaDerived<T>> {
@@ -173,7 +157,11 @@ abstract class KupynaDerived<T extends Kupyna<T>> implements Hash<KupynaDerived<
 
     destroy() { this.h.destroy(); }
 
-    abstract _cloneInto(to?: KupynaDerived<T>): KupynaDerived<T>;
+    _cloneInto(to?: KupynaDerived<T>): KupynaDerived<T> {
+        to ||= new (this.constructor as any)() as KupynaDerived<T>;
+        to.h = this.h.clone();
+        return to;
+    }
     clone(): KupynaDerived<T> { return this._cloneInto(); }
 
     update(data: TArg<Uint8Array>): this {
@@ -182,7 +170,7 @@ abstract class KupynaDerived<T extends Kupyna<T>> implements Hash<KupynaDerived<
         return this;
     }
 
-    digest(): TRet<Uint8Array> { 
+    digest(): TRet<Uint8Array> {
         const buffer = new Uint8Array(this.outputLen);
         this.digestInto(buffer);
 
@@ -197,33 +185,11 @@ abstract class KupynaDerived<T extends Kupyna<T>> implements Hash<KupynaDerived<
 /** Internal Kupyna-256 hash class */
 export class _Kupyna256 extends Kupyna<_Kupyna256> {
     constructor() { super(64); }
-    _cloneInto(to?: _Kupyna256): _Kupyna256 {
-        to ||= new _Kupyna256();
-        to.s.set(this.s);
-        to.x.set(this.x);
-        to.nx = this.nx;
-        to.len = this.len;
-
-        return to;
-    }
-    /** Create hash instance */
-    static create(): _Kupyna256 { return new _Kupyna256(); }
 }
 
 /** Internal Kupyna-512 hash class */
 export class _Kupyna512 extends Kupyna<_Kupyna512> {
     constructor() { super(128); }
-    _cloneInto(to?: _Kupyna512): _Kupyna512 {
-        to ||= new _Kupyna512();
-        to.s.set(this.s);
-        to.x.set(this.x);
-        to.nx = this.nx;
-        to.len = this.len;
-
-        return to;
-    }
-    /** Create hash instance */
-    static create(): _Kupyna512 { return new _Kupyna512(); }
 }
 
 /**
@@ -239,7 +205,8 @@ export class _Kupyna512 extends Kupyna<_Kupyna512> {
  * kupyna256.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const kupyna256 = createHasher(_Kupyna256.create);
+export const kupyna256 = createHasher(() => new _Kupyna256());
+
 /**
  * Kupyna-512 hash function
  * 
@@ -253,42 +220,22 @@ export const kupyna256 = createHasher(_Kupyna256.create);
  * kupyna512.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const kupyna512 = createHasher(_Kupyna512.create);
+export const kupyna512 = createHasher(() => new _Kupyna512());
 
 /** Internal Kupyna-48 hash class */
 export class _Kupyna48 extends KupynaDerived<_Kupyna256> {
     constructor() { super(kupyna256, -6); }
-    _cloneInto(to?: _Kupyna48): _Kupyna48 {
-        to ||= new _Kupyna48();
-        to.h = this.h.clone();
-        return to;
-    }
-    /** Create hash instance */
-    static create(): _Kupyna48 { return new _Kupyna48(); }
 }
 
 /** Internal Kupyna-304 hash class */
 export class _Kupyna304 extends KupynaDerived<_Kupyna512> {
     constructor() { super(kupyna512, -38); }
-    _cloneInto(to?: _Kupyna304): _Kupyna304 {
-        to ||= new _Kupyna304();
-        to.h = this.h.clone();
-        return to;
-    }
-    /** Create hash instance */
-    static create(): _Kupyna304 { return new _Kupyna304(); }
+
 }
 
 /** Internal Kupyna-384 hash class */
 export class _Kupyna384 extends KupynaDerived<_Kupyna512> {
     constructor() { super(kupyna512, -48); }
-    _cloneInto(to?: _Kupyna384): _Kupyna384 {
-        to ||= new _Kupyna384();
-        to.h = this.h.clone();
-        return to;
-    }
-    /** Create hash instance */
-    static create(): _Kupyna384 { return new _Kupyna384(); }
 }
 
 /**
@@ -304,7 +251,8 @@ export class _Kupyna384 extends KupynaDerived<_Kupyna512> {
  * kupyna48.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const kupyna48 = createHasher(_Kupyna48.create);
+export const kupyna48 = createHasher(() => new _Kupyna48());
+
 /**
  * Kupyna-304 hash function
  * 
@@ -318,7 +266,8 @@ export const kupyna48 = createHasher(_Kupyna48.create);
  * kupyna304.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const kupyna304 = createHasher(_Kupyna304.create);
+export const kupyna304 = createHasher(() => new _Kupyna304());
+
 /**
  * Kupyna-384 hash function
  * 
@@ -332,6 +281,6 @@ export const kupyna304 = createHasher(_Kupyna304.create);
  * kupyna384.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const kupyna384 = createHasher(_Kupyna384.create);
+export const kupyna384 = createHasher(() => new _Kupyna384());
 
 export * from "./kmac.js";

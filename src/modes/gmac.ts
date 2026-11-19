@@ -1,11 +1,8 @@
 import { abytes, anumber, numberToBytesLE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
-import { assertKalyna, gf2mMul } from "../utils.js";
+import { assertKalyna, xorBytesInPlace } from "../utils.js";
 import type { Cipher, GMACMode } from "../types.js";
+import { gf2mMultiply } from "../gf/index.js";
 
-const xorBytesInPlace = (a: TArg<Uint8Array>, b: TArg<Uint8Array>) => {
-    if(a.length != b.length) throw new Error("Byte arrays must have same length");
-    for(let i = 0; i < a.length; i++) a[i] ^= b[i];
-}
 /** Galois Message Authentication Code (GMAC) mode */
 export const gmac = (cipher: Cipher, q = 16): GMACMode => {
     assertKalyna(cipher);
@@ -28,7 +25,7 @@ export const gmac = (cipher: Cipher, q = 16): GMACMode => {
                     for (let j = 0; j < blockSizeToProcess; j++) block[j] = input[i + j];
                     if (blockSizeToProcess < cipher.blockSize) block[blockSizeToProcess] = 0x80;
                     for (let j = 0; j < cipher.blockSize; j++) B[j] ^= block[j];
-                    B.set(gf2mMul(cipher.blockSize, B, H));
+                    B.set(gf2mMultiply(cipher.blockSize, B, H));
         
                     i += cipher.blockSize;
                 }

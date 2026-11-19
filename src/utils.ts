@@ -1,77 +1,21 @@
-import { copyBytes, bytesToNumberBE, bytesToNumberLE, numberToBytesBE, numberToBytesLE, type TArg, type TRet, abytes, anumber } from "@noble/curves/utils.js";
+import { abytes, anumber, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { Cipher } from "./types.js";
 import { Kalyna } from "./kalyna/index.js";
 
+export const _U32 = Math.pow(2,32) - 1,
+    _NULL = Uint8Array.of();
+
 export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
-    abytes(a);
-    abytes(b);
-    const mlen = Math.min(a.length, b.length);
-    const result = new Uint8Array(mlen);
+    const mlen = Math.min(a.length, b.length),
+        result = new Uint8Array(mlen);
     for(let i = 0; i < mlen; i++) result[i] = a[i] ^ b[i];
 
     return result;
 }
 
-export const bytesToUint64sBE = (b: TArg<Uint8Array>): TRet<BigUint64Array> => {
-    const size = Math.floor(b.length / 8),
-        result = new BigUint64Array(size);
-    for (let i = 0; i < size; i++) result[i] = bytesToNumberBE(b.subarray(i * 8, i * 8 + 8));
-
-    return result;
-}
-
-export const uint64sToBytesBE = (w: TArg<BigUint64Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(w.length * 8);
-    for (let i = 0; i < w.length; i++) result.set(numberToBytesBE(w[i], 8), i * 8);
-
-    return result;
-}
-
-export const bytesToUint64sLE = (b: TArg<Uint8Array>): TRet<BigUint64Array> => {
-    const size = Math.floor(b.length / 8),
-        result = new BigUint64Array(size);
-    for (let i = 0; i < size; i++) result[i] = bytesToNumberLE(b.subarray(i * 8, i * 8 + 8));
-
-    return result;
-}
-
-export const uint64sToBytesLE = (w: TArg<BigUint64Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(w.length * 8);
-    for (let i = 0; i < w.length; i++) result.set(numberToBytesLE(w[i], 8), i * 8);
-
-    return result;
-}
-
-export const byte = (a: bigint) => Number(a & 0xFFn);
-
-export const getGf2mReductionBytes = (blockSize: number): number[] => [
-    [0x87],
-    [0x25, 0x04],
-    [0x25, 0x01]
-][Math.log2(blockSize) - 4];
-
-export const gf2mMul = (blockSize: number, a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const temp = copyBytes(a),
-        result = new Uint8Array(blockSize),
-        reductionBytes = getGf2mReductionBytes(blockSize);
-    for (let i = 0; i < blockSize * 8; i++) {
-        const byteIndex = Math.floor(i / 8);
-        const bitIndex = i % 8;
-        if (byteIndex < b.length && (b[byteIndex] & (1 << bitIndex))) for (let j = 0; j < blockSize; j++) result[j] ^= temp[j];
-      
-        let carry = 0;
-        for (let j = 0; j < blockSize; j++) {
-            const nextCarry = (temp[j] & 0x80) ? 1 : 0;
-            temp[j] = ((temp[j] << 1) & 0xFF) | carry;
-            carry = nextCarry;
-        }
-      
-        if (carry) {
-            for (let j = 0; j < reductionBytes.length; j++) if (j < blockSize) temp[j] ^= reductionBytes[j];
-        }
-    }
-    
-    return result;
+export const xorBytesInPlace = (dst: TArg<Uint8Array>, src: TArg<Uint8Array>, off = 0) => {
+    if (off + dst.length > src.length) throw new Error("src is too short");
+    for(let i = 0; i < dst.length; i++) dst[i] ^= src[off + i];
 }
 
 export const isKalyna = (cipher: Cipher): cipher is Kalyna => cipher instanceof Kalyna;
@@ -100,4 +44,25 @@ export const abytesAligned = (
         got = `length=${value.length}`,
         message = atitle(title) + 'expected Uint8Array' + ofLen + ', got ' + got;
     throw new RangeError(message);
+}
+
+export const bytesToU32LE = (b: Uint8Array): Uint32Array => {
+    const out = new Uint32Array(b.length >>> 2);
+    for (let i = 0, j = 0; i < out.length; i++, j += 4)
+        out[i] = b[j] | (b[j + 1] << 8) | (b[j + 2] << 16) | (b[j + 3] << 24);
+
+    return out;
+}
+
+export const u32ToBytesLE = (w: Uint32Array): Uint8Array => {
+    const out = new Uint8Array(w.length << 2);
+    for (let i = 0, j = 0; i < w.length; i++, j += 4) {
+        const v = w[i];
+        out[j] = v;
+        out[j + 1] = v >>> 8;
+        out[j + 2] = v >>> 16;
+        out[j + 3] = v >>> 24;
+    }
+
+    return out;
 }
