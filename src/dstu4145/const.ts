@@ -57,7 +57,7 @@ export const DSTU_163: DSTUParameters = {
     Gy: "03826F008A8C51D7B95284D9D03FF0E00CE2CD723A",
     m: 163,
     ks: [7,6,3],
-    oids: generateOids_pb("0")
+    oids: /* @__PURE__ */ generateOids_pb("0")
 }
 
 /** DSTU 4145-2002 163 bit curve (for testing) */
@@ -82,7 +82,7 @@ export const DSTU_167: DSTUParameters = {
     Gy: "5F49EB26781C0EC6B8909156D98ED435E45FD59918",
     m: 167,
     ks: [6],
-    oids: generateOids_pb("1")
+    oids: /* @__PURE__ */ generateOids_pb("1")
 }
 
 /** DSTU 4145-2002 173 bit curve */
@@ -95,7 +95,7 @@ export const DSTU_173: DSTUParameters = {
     Gy: "10B51CC12849B234C75E6DD2028BF7FF5C1CE0D991A1",
     m: 173,
     ks: [10,2,1],
-    oids: generateOids_pb("2")
+    oids: /* @__PURE__ */ generateOids_pb("2")
 }
 
 const ONB_173: Required<DSTUShortParameters["onb"]> = {
@@ -115,7 +115,7 @@ export const DSTU_173_ONB: DSTUParameters = {
     m: 173,
     ks: [10,2,1],
     onb: ONB_173,
-    oids: generateOids_onb("0")
+    oids: /* @__PURE__ */ generateOids_onb("0")
 }
 
 /** DSTU 4145-2002 173 bit curve (ONB, for testing) */
@@ -141,7 +141,7 @@ export const DSTU_179: DSTUParameters = {
     Gy: "025FBC363582DCEC065080CA8287AAFF09788A66DC3A9E",
     m: 179,
     ks: [4,2,1],
-    oids: generateOids_pb("3")
+    oids: /* @__PURE__ */ generateOids_pb("3")
 }
 
 /** DSTU 4145-2002 179 bit curve (ONB) */
@@ -159,7 +159,7 @@ export const DSTU_179_ONB: DSTUParameters = {
         root1: "61459B574DD5042A1F24458913913559A0E436E811FA0200",
         root2: "2DABB4A422BFA53E33FB9276C3E05A0E4F6F7A373CBE0600"
     },
-    oids: generateOids_onb("1")
+    oids: /* @__PURE__ */ generateOids_onb("1")
 }
 
 /** DSTU 4145-2002 191 bit curve */
@@ -172,7 +172,7 @@ export const DSTU_191: DSTUParameters = {
     Gy: "29C41E568B77C617EFE5902F11DB96FA9613CD8D03DB08DA",
     m: 191,
     ks: [9],
-    oids: generateOids_pb("4")
+    oids: /* @__PURE__ */ generateOids_pb("4")
 }
 
 /** DSTU 4145-2002 191 bit curve (ONB) */
@@ -190,7 +190,7 @@ export const DSTU_191_ONB: DSTUParameters = {
         root1: "2B54ACCD849AD972B18FA0B5162FA9DBBF3FA51AF512FE58",
         root2: "1FCF56EBC3149F0107368DC9BE706078A534C0521E141632"
     },
-    oids: generateOids_onb("2")
+    oids: /* @__PURE__ */ generateOids_onb("2")
 }
 
 /** DSTU 4145-2002 233 bit curve */
@@ -203,7 +203,7 @@ export const DSTU_233: DSTUParameters = {
     Gy: "9CA8B57A934C54DEEDA9E54A7BBAD95E3B2E91C54D32BE0B9DF96D8D35",
     m: 233,
     ks: [9,4,1],
-    oids: generateOids_pb("5")
+    oids: /* @__PURE__ */ generateOids_pb("5")
 }
 
 /** DSTU 4145-2002 233 bit curve (ONB) */
@@ -221,7 +221,7 @@ export const DSTU_233_ONB: DSTUParameters = {
         root1: "ABBFC55B841C74F461EC5DC0D81A2013C2A69BF19F97AAB01B70D2498F010000",
         root2: "214C08346A28283EB5F281C5D8604E518202C240A9121EFA89FD28E6CD000000"
     },
-    oids: generateOids_onb("3")
+    oids: /* @__PURE__ */ generateOids_onb("3")
 }
 
 /** DSTU 4145-2002 257 bit curve */
@@ -234,7 +234,7 @@ export const DSTU_257: DSTUParameters = {
     Gy: "010686D41FF744D4449FCCF6D8EEA03102E6812C93A9D60B978B702CF156D814EF",
     m: 257,
     ks: [12],
-    oids: generateOids_pb("6")
+    oids: /* @__PURE__ */ generateOids_pb("6")
 }
 
 /** DSTU 4145-2002 307 bit curve */
@@ -247,7 +247,7 @@ export const DSTU_307: DSTUParameters = {
     Gy: "05D9306BACD22B7FAEB09D2E049C6E2866C5D1677762A8F2F2DC9A11C7F7BE8340AB2237C7F2A0",
     m: 307,
     ks: [8,4,2],
-    oids: generateOids_pb("7")
+    oids: /* @__PURE__ */ generateOids_pb("7")
 }
 
 /** DSTU 4145-2002 367 bit curve */
@@ -260,7 +260,7 @@ export const DSTU_367: DSTUParameters = {
     Gy: "01AB597A5B4477F59E39539007C7F977D1A567B92B043A49C6B61984C3FE3481AAF454CD41BA1F051626442B3C10",
     m: 367,
     ks: [21],
-    oids: generateOids_pb("8")
+    oids: /* @__PURE__ */ generateOids_pb("8")
 }
 
 /** DSTU 4145-2002 431 bit curve */
@@ -273,7 +273,7 @@ export const DSTU_431: DSTUParameters = {
     Gy: "70B5E1E14031C1F70BBEFE96BDDE66F451754B4CA5F48DA241F331AA396B8D1839A855C1769B1EA14BA53308B5E2723724E090E02DB9",
     m: 431,
     ks: [5,3,1],
-    oids: generateOids_pb("9")
+    oids: /* @__PURE__ */ generateOids_pb("9")
 }
 
 /** DSTU 4145-2002 431 bit curve (ONB) */
@@ -291,5 +291,5 @@ export const DSTU_431_ONB: DSTUParameters = {
         root1: "595A5822496675B56C7EAE7E537D60F655C784A9B84DDEADE42431B1C324AE818AC7DCBC0E7370E69A16C3268FF66E2F332DD2A013450000",
         root2: "27FA953C557581AD37A991EB2FB46B7C65DBE2B2CA021FEFAD6AD3EAFB73C14E1A528B8E5C778705B9DFEA18D6F76D125175130A020A0000"
     },
-    oids: generateOids_onb("4")
+    oids: /* @__PURE__ */ generateOids_onb("4")
 }

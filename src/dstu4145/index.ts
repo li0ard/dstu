@@ -196,26 +196,26 @@ export * from "./ecies.js";
 // You need to initialize them manually via `dstu4145`
 
 /** DSTU 4145-2002 163 bit curve */
-export const dstu163 = dstu4145(DSTU_163);
+export const dstu163 = /* @__PURE__ */ dstu4145(DSTU_163);
 /** DSTU 4145-2002 167 bit curve */
-export const dstu167 = dstu4145(DSTU_167);
+export const dstu167 = /* @__PURE__ */ dstu4145(DSTU_167);
 /** DSTU 4145-2002 173 bit curve */
-export const dstu173 = dstu4145(DSTU_173);
+export const dstu173 = /* @__PURE__ */ dstu4145(DSTU_173);
 /** DSTU 4145-2002 179 bit curve */
-export const dstu179 = dstu4145(DSTU_179);
+export const dstu179 = /* @__PURE__ */ dstu4145(DSTU_179);
 /** DSTU 4145-2002 191 bit curve */
-export const dstu191 = dstu4145(DSTU_191);
+export const dstu191 = /* @__PURE__ */ dstu4145(DSTU_191);
 /** DSTU 4145-2002 233 bit curve */
-export const dstu233 = dstu4145(DSTU_233);
+export const dstu233 = /* @__PURE__ */ dstu4145(DSTU_233);
 /** DSTU 4145-2002 257 bit curve */
-export const dstu257 = dstu4145(DSTU_257);
+export const dstu257 = /* @__PURE__ */ dstu4145(DSTU_257);
 /** DSTU 4145-2002 257 bit curve (LE) */
-export const dstu257_le = dstu4145_le(DSTU_257);
+export const dstu257_le = /* @__PURE__ */ dstu4145_le(DSTU_257);
 /** DSTU 4145-2002 307 bit curve */
-export const dstu307 = dstu4145(DSTU_307);
+export const dstu307 = /* @__PURE__ */ dstu4145(DSTU_307);
 /** DSTU 4145-2002 367 bit curve */
-export const dstu367 = dstu4145(DSTU_367);
+export const dstu367 = /* @__PURE__ */ dstu4145(DSTU_367);
 /** DSTU 4145-2002 431 bit curve */
-export const dstu431 = dstu4145(DSTU_431);
+export const dstu431 = /* @__PURE__ */ dstu4145(DSTU_431);
 /** DSTU 4145-2002 431 bit curve (LE) */
-export const dstu431_le = dstu4145_le(DSTU_431);
+export const dstu431_le = /* @__PURE__ */ dstu4145_le(DSTU_431);

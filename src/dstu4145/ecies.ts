@@ -1,11 +1,12 @@
 import { abytes, randomBytes, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { Dstu9311, gost3431195 } from "../dstu9311/index.js";
+import { Dstu9311 } from "../dstu9311/index.js";
 import { Kalyna256 } from "../kalyna/index.js";
 import { keyWrap } from "../keywrap.js";
 import { cfb } from "../modes/cfb.js";
 import { kupyna256 } from "../kupyna/index.js";
 import type { ECDSA } from "../types.js";
 import { iso15946_kdf } from "../iso15946.js";
+import { gost3431195 } from "../gost34311/index.js";
 
 /** Encrypted message */
 export type EncryptedMessage = {
@@ -28,7 +29,7 @@ export type EncryptedMessage = {
  */
 export const dstu4145Encrypter = (
     curve: ECDSA,
-    hash: CHash<Hash<any>>,
+    hash: CHash,
     withCofactor = true,
     useDstu9311 = false
 ) => {

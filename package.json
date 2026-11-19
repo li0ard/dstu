@@ -1,6 +1,6 @@
 {
   "name": "@li0ard/dstu",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "module",
@@ -9,10 +9,14 @@
     "./dstu4145.js": "./dstu4145/index.js",
     "./dstu9041.js": "./dstu9041/index.js",
     "./dstu9311.js": "./dstu9311/index.js",
+    "./gost34311.js": "./gost34311/index.js",
     "./kalyna.js": "./kalyna/index.js",
     "./kupyna.js": "./kupyna/index.js",
     "./modes.js": "./modes/index.js",
     "./strumok.js": "./strumok/index.js",
+    "./iso15946.js": "./iso15946.js",
+    "./keywrap.js": "./keywrap.js",
+    "./kmac.js": "./kmac.js",
     "./types.js": "./types.js"
   },
   "author": "li0ard",
@@ -34,21 +38,19 @@
   "devDependencies": {
     "@types/bn.js": "^5.2.0",
     "@types/bun": "latest",
-    "typedoc": "^0.28.19"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "typedoc": "^0.28.20"
   },
   "dependencies": {
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
-    "bn.js": "^5.2.3",
-    "@peculiar/asn1-schema": "^2.9.5",
-    "@peculiar/asn1-x509": "^2.9.5"
+    "bn.js": "^5.2.5",
+    "@peculiar/asn1-schema": "^2.11.1",
+    "@peculiar/asn1-x509": "^2.11.1"
   },
   "files": ["**/*.js", "**/*.d.ts"],
   "publishConfig": {
     "access": "public"
   },
-  "keywords": ["dstu", "crypto", "kalyna", "kupyna", "strumok"]
+  "keywords": ["dstu", "crypto", "kalyna", "kupyna", "strumok"],
+  "sideEffects": false
 }

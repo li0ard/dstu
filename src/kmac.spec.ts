@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test"
 import { kmac256, kmac384, kmac512 } from "./kmac";
 import { copyBytes, hexToBytes } from "@noble/hashes/utils.js";
-import { alphabet, KEY256, KEY512 } from "../modes/_test_utils.test";
+import { alphabet, KEY256, KEY512 } from "./modes/_test_utils.test";
 
 describe("[KMAC] Kupyna", () => {
     const msg = alphabet.subarray(0,31);

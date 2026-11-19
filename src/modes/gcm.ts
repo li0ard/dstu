@@ -1,7 +1,8 @@
 import { abytes, anumber, equalBytes, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import { gmac } from "./gmac.js";
 import type { AEADMode, Cipher } from "../types.js";
-import { assertKalyna, xorBytes } from "../utils.js";
+import { xorBytes } from "../utils.js";
+import { assertKalyna } from "./_guard.js";
 
 // CTR for GCM and CCM
 export const half_ctr = (cipher: Cipher, iv: TArg<Uint8Array>) => {

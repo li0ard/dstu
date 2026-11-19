@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { gost3431195, gost3431195Hmac } from "./hash";
+import { gost3431195, gost3431195Hmac } from "./index";
 import { hexToBytes, type TRet } from "@noble/hashes/utils.js";
 
 const performTest = (

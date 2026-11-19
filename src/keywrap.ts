@@ -24,8 +24,8 @@ export const keyWrap = (kek: TArg<Uint8Array>, useDstu9311 = false): {
     const ivLength = useDstu9311 ? 8 : 32,
         macLength = useDstu9311 ? 4 : 32;
 
-    const macMode = cmac(cipher, macLength);
-    const finalMode = cfb(cipher, useDstu9311 ? IV1_9311 : IV1_KALYNA, 32);
+    const macMode = cmac(cipher, macLength),
+        finalMode = cfb(cipher, useDstu9311 ? IV1_9311 : IV1_KALYNA, 32);
 
     return Object.freeze({
         wrap: (key: TArg<Uint8Array>, iv?: TArg<Uint8Array>): TRet<Uint8Array> => {
@@ -40,13 +40,11 @@ export const keyWrap = (kek: TArg<Uint8Array>, useDstu9311 = false): {
         },
         unwrap: (wrappedKey: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(wrappedKey, undefined, "wrappedKey");
-            const dec_wrapped = finalMode.decrypt(wrappedKey).reverse();
-            const iv = dec_wrapped.subarray(0, ivLength);
-            const key_mac = cfb(cipher, iv, 32).decrypt(dec_wrapped.subarray(ivLength));
-            const key = key_mac.slice(0, -macLength);
-
-            const actualMac = macMode.compute(key);
-            if(!equalBytes(actualMac, key_mac.subarray(-macLength)))
+            const dec_wrapped = finalMode.decrypt(wrappedKey).reverse(),
+                iv = dec_wrapped.subarray(0, ivLength),
+                key_mac = cfb(cipher, iv, 32).decrypt(dec_wrapped.subarray(ivLength)),
+                key = key_mac.slice(0, -macLength);
+            if(!equalBytes(macMode.compute(key), key_mac.subarray(-macLength)))
                 throw new Error("Invalid MAC");
 
             return key;

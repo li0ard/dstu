@@ -10,19 +10,19 @@ const dstu9041 = (length: 256 | 512) => {
     let MAX_LENGTH: number,
         HASH_LENGTH_BYTES: number, 
         curve: ReturnType<typeof dstu9041Curve>,
-        Сipher: typeof Kalyna256 | typeof Kalyna512;
+        Cipher: typeof Kalyna256 | typeof Kalyna512;
     switch(length) {
         case 256:
             MAX_LENGTH = 200;
             HASH_LENGTH_BYTES = 4;
             curve = curve256;
-            Сipher = Kalyna256;
+            Cipher = Kalyna256;
         break;
         case 512:
             MAX_LENGTH = 424;
             HASH_LENGTH_BYTES = 8;
             curve = curve512;
-            Сipher = Kalyna512;
+            Cipher = Kalyna512;
         break;
         default:
             throw new Error("Invalid length, supported only 256 and 512 bits");
@@ -102,7 +102,7 @@ const dstu9041 = (length: 256 | 512) => {
 
             const plaintext_kw = new Uint8Array(2 * STRUCT_BYTES);
             plaintext_kw.set(struct);
-            const ciphertext = kw(new Сipher(key)).wrap(plaintext_kw);
+            const ciphertext = kw(new Cipher(key)).wrap(plaintext_kw);
 
             return concatBytes(r, ciphertext);
         },
@@ -115,7 +115,7 @@ const dstu9041 = (length: 256 | 512) => {
 
             const T = Point.fromX(r).multiply(bytesToNumberBE(privateKey)),
                 key = Fp.toBytes(T.x);
-            const plaintext = kw(new Сipher(key)).unwrap(ciphertext.subarray(STRUCT_BYTES));
+            const plaintext = kw(new Cipher(key)).unwrap(ciphertext.subarray(STRUCT_BYTES));
 
             return parseStruct(plaintext.subarray(0, STRUCT_BYTES));
         }
@@ -123,6 +123,6 @@ const dstu9041 = (length: 256 | 512) => {
 }
 
 /** DSTU 9041:2020 (256 bit) */
-export const dstu9041_256 = dstu9041(256);
+export const dstu9041_256 = /* @__PURE__ */ dstu9041(256);
 /** DSTU 9041:2020 (512 bit) */
-export const dstu9041_512 = dstu9041(512);
+export const dstu9041_512 = /* @__PURE__ */ dstu9041(512);

@@ -1,7 +1,8 @@
 import { abytes, concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { assertKalyna, xorBytes } from "../utils.js";
+import { xorBytes } from "../utils.js";
 import type { Cipher, DiskMode } from "../types.js";
 import { gf2mDouble } from "../gf/index.js";
+import { assertKalyna } from "./_guard.js";
 
 /** XEX Tweakable Block Ciphertext Stealing (XTS) */
 export const xts = (cipher: Cipher): DiskMode => {

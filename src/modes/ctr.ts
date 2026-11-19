@@ -1,6 +1,7 @@
 import { abytes, createView, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { isKalyna, xorBytes } from "../utils.js";
+import { xorBytes } from "../utils.js";
 import type { Cipher, StreamMode } from "../types.js";
+import { isKalyna } from "./_guard.js";
 
 const C1 = 0x01010104, C2 = 0x01010101;
 

@@ -1,11 +1,11 @@
 import { abytes, ahash, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { AsnConvert, AsnProp, AsnPropTypes } from "@peculiar/asn1-schema";
 import { AlgorithmIdentifier } from "@peculiar/asn1-x509";
-import { _Gost3431195 } from "./dstu9311/hash.js";
+import { _Gost3431195 } from "./gost34311/index.js";
 import { _NULL } from "./utils.js";
 
-const KEY_LENGTH = /* @__PURE__ */ new Uint8Array([0,0,1,0]);
-const COUNTER = /* @__PURE__ */ new Uint8Array([0,0,0,1]);
+const KEY_LENGTH = /* @__PURE__ */ new Uint8Array([0,0,1,0]),
+    COUNTER = /* @__PURE__ */ new Uint8Array([0,0,0,1]);
 
 class SharedInfo {
     @AsnProp({ type: AlgorithmIdentifier })

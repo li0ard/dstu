@@ -1,5 +1,5 @@
 import { abytes, aexists, ahash, aoutput, clean, type CHash, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { kupyna256, type _Kupyna256, kupyna384, type _Kupyna384, kupyna512, type _Kupyna512 } from "./index.js";
+import { kupyna256, type _Kupyna256, kupyna384, type _Kupyna384, kupyna512, type _Kupyna512 } from "./kupyna/index.js";
 
 const dpad = /* @__PURE__ */ Uint8Array.from({ length: 128 }, (_, i) => i === 0 ? 0x80 : 0);
 

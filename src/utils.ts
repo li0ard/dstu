@@ -1,9 +1,7 @@
 import { abytes, anumber, type TArg, type TRet } from "@noble/hashes/utils.js";
-import type { Cipher } from "./types.js";
-import { Kalyna } from "./kalyna/index.js";
 
-export const _U32 = Math.pow(2,32) - 1,
-    _NULL = Uint8Array.of();
+export const _U32 = 0xFFFFFFFF,
+    _NULL = /* @__PURE__ */ Uint8Array.of();
 
 export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
     const mlen = Math.min(a.length, b.length),
@@ -16,11 +14,6 @@ export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Ar
 export const xorBytesInPlace = (dst: TArg<Uint8Array>, src: TArg<Uint8Array>, off = 0) => {
     if (off + dst.length > src.length) throw new Error("src is too short");
     for(let i = 0; i < dst.length; i++) dst[i] ^= src[off + i];
-}
-
-export const isKalyna = (cipher: Cipher): cipher is Kalyna => cipher instanceof Kalyna;
-export const assertKalyna = (cipher: Cipher) => {
-    if(!isKalyna(cipher)) throw new Error("Cipher mode only for Kalyna");
 }
 
 export const reverseBytes = (

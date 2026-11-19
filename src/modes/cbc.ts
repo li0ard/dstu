@@ -1,6 +1,7 @@
 import { abytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { BlockMode, Cipher } from "../types.js";
-import { abytesAligned, assertKalyna, xorBytes } from "../utils.js";
+import { abytesAligned, xorBytes } from "../utils.js";
+import { assertKalyna } from "./_guard.js";
 
 /** Cipher Block Chaining (CBC) mode */
 export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {

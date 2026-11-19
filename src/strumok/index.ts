@@ -14,7 +14,7 @@ const loadBE = (b: Uint8Array): Uint32Array => {
     return out;
 }
 
-const genAlphaTable = (v: Uint8Array): Uint32Array => {
+const genAlphaTable = (v: number[]): Uint32Array => {
     const t = new Uint32Array(512);
     for (let c = 0; c < 256; c++) {
         const m0 = gf256Multiply(c, v[0]), m1 = gf256Multiply(c, v[1]),
@@ -28,8 +28,8 @@ const genAlphaTable = (v: Uint8Array): Uint32Array => {
     return t;
 }
 
-const AM = /* @__PURE__ */ genAlphaTable(Uint8Array.of(215, 63, 4, 18, 94, 0, 0, 4)),
-    AMI = /* @__PURE__ */ genAlphaTable(Uint8Array.of(71, 252, 198, 1, 138, 153, 0, 0));
+const AM = /* @__PURE__ */ genAlphaTable([215, 63, 4, 18, 94, 0, 0, 4]),
+    AMI = /* @__PURE__ */ genAlphaTable([71, 252, 198, 1, 138, 153, 0, 0]);
 
 const S_SIZE = 16, S_MASK = S_SIZE - 1;
 

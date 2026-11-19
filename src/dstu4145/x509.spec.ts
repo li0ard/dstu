@@ -3,8 +3,9 @@ import { AsnConvert, AsnIntegerArrayBufferConverter, AsnProp, AsnPropTypes, AsnT
 import { Certificate } from "@peculiar/asn1-x509";
 import { describe, test, expect } from "bun:test";
 import { dstu4145_le, expandPoint } from ".";
-import { _Gost3431195, DKE_1, gost3431195 } from "../dstu9311";
+import { DKE_1 } from "../dstu9311";
 import { kupyna256, kupyna384, kupyna512 } from "../kupyna";
+import { _Gost3431195, gost3431195 } from "../gost34311";
 
 // ASN.1 schemes from https://zakon.rada.gov.ua/laws/show/z1398-12#Text
 /** Coefficients for pentanomial polynomial */

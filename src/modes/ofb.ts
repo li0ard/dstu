@@ -1,6 +1,7 @@
 import { abytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { Cipher, StreamMode } from "../types.js";
-import { assertKalyna, xorBytes } from "../utils.js";
+import { xorBytes } from "../utils.js";
+import { assertKalyna } from "./_guard.js";
 
 /** Output Feedback (OFB) mode */
 export const ofb = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {

@@ -1,6 +1,7 @@
 import { abytes, anumber, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { BlockMode, Cipher } from "../types.js";
-import { abytesAligned, isKalyna, xorBytes } from "../utils.js";
+import { abytesAligned, xorBytes } from "../utils.js";
+import { isKalyna } from "./_guard.js";
 
 /** Cipher Feedback (CFB) mode */
 export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, q: number = cipher.blockSize): BlockMode => {

@@ -1,7 +1,7 @@
 import type { EdwardsOpts } from "@noble/curves/abstract/edwards.js";
 import { Field, mod } from "@noble/curves/abstract/modular.js";
 import { concatBytes, bitGet, bitLen, bytesToNumberBE, randomBytes, type TArg, type TRet, abytes } from "@noble/curves/utils.js";
-import type { KeyPair } from "../types";
+import type { KeyPair } from "../types.js";
 
 export const dstu9041Curve = (parameters: EdwardsOpts) => {
     if(parameters.a != 2n)
@@ -143,7 +143,7 @@ export const dstu9041Curve = (parameters: EdwardsOpts) => {
     return Object.freeze({ Point, getPublicKey, keygen });
 }
 
-export const curve256 = dstu9041Curve({
+export const curve256 = /* @__PURE__ */ dstu9041Curve({
     p: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE4Dn,
     n: 0x4000000000000000000000000000000029E26087789BC2815BDFF97093543CCFn,
     a: 2n,
@@ -153,7 +153,7 @@ export const curve256 = dstu9041Curve({
     Gy: 0x742F27A268641C9D7DDF69892BE3DF3D8F9CC52260B89A4953C8379C7C0A212Bn
 });
 
-export const curve512 = dstu9041Curve({
+export const curve512 = /* @__PURE__ */ dstu9041Curve({
     p: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC95n,
     n: 0x400000000000000000000000000000000000000000000000000000000000000028A3CE52209E2BD4952882D5574165192C46C0D0311FEA6BF9FECE70EE63B59Fn,
     a: 2n,

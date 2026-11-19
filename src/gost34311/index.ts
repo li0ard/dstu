@@ -1,24 +1,24 @@
-import { abytes, aexists, aoutput, clean, createHasher, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, aexists, aoutput, clean, createHasher, type CHash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { Dstu9311, DKE_1 } from "../dstu9311/index.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
 import { _HMAC } from "@noble/hashes/hmac.js";
 import { HashMD } from "@noble/hashes/_md.js";
 
-const C3 = new Uint8Array([
+const C3 = /* @__PURE__ */ new Uint8Array([
     0xff, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0xff,
     0xff, 0x00, 0x00, 0xff, 0x00, 0xff, 0xff, 0x00,
     0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff,
     0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00
 ]);
 
-const U = new Uint8Array(32),
-    V = new Uint8Array(32),
-    W = new Uint8Array(32),
-    X = new Uint8Array(32),
-    KEY = new Uint8Array(32),
-    BLOCK = new Uint8Array(32),
-    TMP = new Uint8Array(8),
-    CT = new Uint8Array(8);
+const U = /* @__PURE__ */ new Uint8Array(32),
+    V = /* @__PURE__ */ new Uint8Array(32),
+    W = /* @__PURE__ */ new Uint8Array(32),
+    X = /* @__PURE__ */ new Uint8Array(32),
+    KEY = /* @__PURE__ */ new Uint8Array(32),
+    BLOCK = /* @__PURE__ */ new Uint8Array(32),
+    TMP = /* @__PURE__ */ new Uint8Array(8),
+    CT = /* @__PURE__ */ new Uint8Array(8);
 
 const A = (x: TArg<Uint8Array>) => {
     for (let i = 0; i < 8; i++) TMP[i] = x[24 + i] ^ x[16 + i];
@@ -161,13 +161,13 @@ export class _Gost3431195 extends HashMD<_Gost3431195> {
  * @returns Digest bytes.
  * @example
  * ```ts
- * import { gost3431195 } from "@li0ard/dstu/dstu9311.js";
+ * import { gost3431195 } from "@li0ard/dstu/gost34311.js";
  * 
  * gost3431195(new Uint8Array([97, 98, 99]));
- * gost3431195.create(sbox?).update(new Uint8Array([97, 98, 99])).digest();
+ * gost3431195.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const gost3431195 = createHasher(() => new _Gost3431195());
+export const gost3431195: TRet<CHash<_Gost3431195>> = /* @__PURE__ */ createHasher(() => new _Gost3431195());
 
 /**
  * HMAC over GOST 34.311-95 hash function
@@ -186,7 +186,7 @@ export class Gost3431195HMAC extends _HMAC<_Gost3431195> {
  * @returns Authentication tag bytes.
  * @example
  * ```ts
- * import { gost3431195Hmac } from "@li0ard/dstu/dstu9311.js";
+ * import { gost3431195Hmac } from "@li0ard/dstu/gost34311.js";
  * const key = new Uint8Array([1, 2, 3]);
  * const message = new Uint8Array([4, 5, 6]);
  * const mac = gost3431195Hmac(key, message);

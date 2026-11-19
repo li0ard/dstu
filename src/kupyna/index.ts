@@ -205,7 +205,7 @@ export class _Kupyna512 extends Kupyna<_Kupyna512> {
  * kupyna256.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const kupyna256 = createHasher(() => new _Kupyna256());
+export const kupyna256: TRet<CHash<_Kupyna256>> = /* @__PURE__ */ createHasher(() => new _Kupyna256());
 
 /**
  * Kupyna-512 hash function
@@ -220,7 +220,7 @@ export const kupyna256 = createHasher(() => new _Kupyna256());
  * kupyna512.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const kupyna512 = createHasher(() => new _Kupyna512());
+export const kupyna512: TRet<CHash<_Kupyna512>> = /* @__PURE__ */ createHasher(() => new _Kupyna512());
 
 /** Internal Kupyna-48 hash class */
 export class _Kupyna48 extends KupynaDerived<_Kupyna256> {
@@ -251,7 +251,7 @@ export class _Kupyna384 extends KupynaDerived<_Kupyna512> {
  * kupyna48.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const kupyna48 = createHasher(() => new _Kupyna48());
+export const kupyna48: TRet<CHash<_Kupyna48>> = /* @__PURE__ */ createHasher(() => new _Kupyna48());
 
 /**
  * Kupyna-304 hash function
@@ -266,7 +266,7 @@ export const kupyna48 = createHasher(() => new _Kupyna48());
  * kupyna304.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const kupyna304 = createHasher(() => new _Kupyna304());
+export const kupyna304: TRet<CHash<_Kupyna304>> = /* @__PURE__ */ createHasher(() => new _Kupyna304());
 
 /**
  * Kupyna-384 hash function
@@ -281,6 +281,4 @@ export const kupyna304 = createHasher(() => new _Kupyna304());
  * kupyna384.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const kupyna384 = createHasher(() => new _Kupyna384());
-
-export * from "./kmac.js";
+export const kupyna384: TRet<CHash<_Kupyna384>> = /* @__PURE__ */ createHasher(() => new _Kupyna384());

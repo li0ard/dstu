@@ -1,7 +1,7 @@
 import { abytes, concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { pad, unpad } from "../padding.js";
 import type { Cipher, WrapMode } from "../types.js";
-import { assertKalyna } from "../utils.js";
+import { assertKalyna } from "./_guard.js";
 
 /** Key wrapping (KW) */
 export const kw = (cipher: Cipher): WrapMode => {

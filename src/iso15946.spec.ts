@@ -1,7 +1,7 @@
 // Test vectors from "Наказ № 112 від 14.05.2010 Про затвердження Технічних специфікацій форматів криптографічних повідомлень. Захищені дані"
 import { describe, test, expect } from "bun:test";
 import { hexToBytes, type TRet, type CHash } from "@noble/hashes/utils.js";
-import { gost3431195 } from "./dstu9311";
+import { gost3431195 } from "./gost34311";
 import { iso15946_kdf } from "./iso15946";
 
 const performTest = (

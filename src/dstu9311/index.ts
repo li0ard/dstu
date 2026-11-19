@@ -18,7 +18,7 @@ const genTable = (sbox: TArg<Uint8Array>): TRet<Uint32Array> => {
     return table;
 }
 
-const TABLES = new WeakMap<Uint8Array, Uint32Array>();
+const TABLES = /* @__PURE__ */ new WeakMap<Uint8Array, Uint32Array>();
 const getTable = (sbox: TArg<Uint8Array>): TRet<Uint32Array> => {
     let t = TABLES.get(sbox);
     if (!t) TABLES.set(sbox, t = genTable(sbox));
@@ -78,4 +78,3 @@ export class Dstu9311 implements Cipher {
 }
 
 export * from "./const.js";
-export * from "./hash.js";

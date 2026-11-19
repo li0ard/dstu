@@ -1,9 +1,10 @@
 import { anumber, concatBytes, type TArg, type TRet, bytesToNumberLE, numberToBytesLE, abytes } from "@noble/curves/utils.js";
 import type { Cipher, MACMode } from "../types.js";
 import { pad } from "../padding.js";
-import { isKalyna, xorBytes } from "../utils.js";
+import { xorBytes } from "../utils.js";
 import { keySequences } from "../dstu9311/const.js";
 import type { Dstu9311 } from "../dstu9311/index.js";
+import { isKalyna } from "./_guard.js";
 
 export const cmac = (cipher: Cipher, q = 16): MACMode => {
     anumber(q, "q");

@@ -1,7 +1,8 @@
 import { abytes, anumber, numberToBytesLE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
-import { assertKalyna, xorBytesInPlace } from "../utils.js";
+import { xorBytesInPlace } from "../utils.js";
 import type { Cipher, GMACMode } from "../types.js";
 import { gf2mMultiply } from "../gf/index.js";
+import { assertKalyna } from "./_guard.js";
 
 /** Galois Message Authentication Code (GMAC) mode */
 export const gmac = (cipher: Cipher, q = 16): GMACMode => {

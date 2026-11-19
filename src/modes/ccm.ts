@@ -1,8 +1,8 @@
 import { abytes, anumber, equalBytes, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import type { AEADMode, Cipher } from "../types.js";
-import { assertKalyna } from "../utils.js";
 import { pad } from "../padding.js";
 import { half_ctr } from "./gcm.js";
+import { assertKalyna } from "./_guard.js";
 
 /** Counter with CBC-MAC (CCM) mode (AEAD) */
 export const ccm = (cipher: Cipher, iv: TArg<Uint8Array>, q = 16, Nb = 4): AEADMode => {
